@@ -1,11 +1,13 @@
 package de.freesoccerhdx.pandadb;
 
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +21,8 @@ public class ServerDataStorage {
 
     private HashMap<ListType, HashMap<String, HashMap<String,List<Object>>>> listData = new HashMap<>();
 
-    private File databasefile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","panda.db");
+    private File databaseFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","panda.db");
+    private File dataTreeFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","datatree.txt");
     private boolean haschanged = true;
 
     public ServerDataStorage(){
@@ -43,8 +46,8 @@ public class ServerDataStorage {
             public void run() {
 
                 try {
-                    if(haschanged || !databasefile.exists()) {
-                        databasefile.mkdirs();
+                    if(haschanged || !databaseFile.exists()) {
+                        databaseFile.mkdirs();
                         System.out.println(" ");
                         System.out.println("Try to save the data...");
                         long start = System.currentTimeMillis();
@@ -63,13 +66,110 @@ public class ServerDataStorage {
         },1000L*30,1000L*60);
     }
 
+
+    public void generateDataTree() {
+        FileOutputStream fos = null;
+        try {
+            dataTreeFile.mkdirs();
+            if(dataTreeFile.exists()){
+                dataTreeFile.delete();
+            }
+            fos = new FileOutputStream(dataTreeFile);
+
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
+            bw.write("ValueData(Size="+valueData.size()+"):");
+            bw.newLine();
+
+            for(String key : valueData.keySet()){
+                HashMap<String, Double> keydata = valueData.get(key);
+                bw.write("    KEY="+key + " (Size="+keydata.size()+")");
+                bw.newLine();
+                int maxlength = -1;
+                for(String member : keydata.keySet()){
+                    maxlength = Math.max(maxlength,member.length());
+                }
+                maxlength += 2;
+                for(String member : keydata.keySet()){
+                    int remainlength = maxlength-member.length();
+                    String buffer = " ".repeat(remainlength);
+                    bw.write("        MEMBER=" +member+buffer+ "Value="+keydata.get(member));
+                    bw.newLine();
+                }
+            }
+            bw.write("TextData(Size="+textData.size()+"):");
+            bw.newLine();
+
+            for(String key : textData.keySet()){
+                HashMap<String, String> keydata = textData.get(key);
+                bw.write("    KEY="+key + " (Size="+keydata.size()+")");
+                bw.newLine();
+                int maxlength = -1;
+                for(String member : keydata.keySet()){
+                    maxlength = Math.max(maxlength,member.length());
+                }
+                maxlength += 2;
+                for(String member : keydata.keySet()){
+                    int remainlength = maxlength-member.length();
+                    String buffer = " ".repeat(remainlength);
+                    bw.write("        MEMBER=" +member+buffer+ "Text="+keydata.get(member));
+                    bw.newLine();
+                }
+            }
+            bw.write("ListData:");
+            bw.newLine();
+            for(ListType listType : ListType.values()){
+                if(listData.containsKey(listType)){
+                    bw.write("    "+listType+"(Size="+textData.size()+"):");
+                    bw.newLine();
+                    HashMap<String, HashMap<String, List<Object>>> listkeys = listData.get(listType);
+                    for(String key : listkeys.keySet()){
+                        HashMap<String, List<Object>> keyData = listkeys.get(key);
+
+                        bw.write("        KEY="+key+"(Size="+keyData.size()+"):");
+                        bw.newLine();
+
+                        for(String valuekey : keyData.keySet()){
+                            List<Object> objects = keyData.get(valuekey);
+                            bw.write("            LISTKEY="+valuekey+"(Size="+objects.size()+"):");
+                            bw.newLine();
+                            bw.write("                ");
+                            int c = 0;
+                            for(Object obj : objects){
+                                bw.write(listType.asString(obj));
+                                if(c != objects.size()-1){
+                                    bw.write(",");
+                                }
+                                c++;
+                            }
+                            bw.newLine();
+                        }
+
+                    }
+
+
+                }else{
+                    bw.write("    "+listType+"(Size=0)");
+                    bw.newLine();
+                }
+            }
+
+
+
+            bw.close();
+        }catch (Exception exception){
+            exception.printStackTrace();
+        }
+
+    }
+
     public void loadDatabase() throws  IOException {
-        System.out.println("Path to database: "+databasefile.getPath());
-        if (!databasefile.exists()) {
+        System.out.println("Path to database: "+databaseFile.getPath());
+        if (!databaseFile.exists()) {
             System.err.println("No database found!");
             return;
         }
-        DataInputStream dis = new DataInputStream(new FileInputStream(databasefile));
+        DataInputStream dis = new DataInputStream(new FileInputStream(databaseFile));
         try {
             int valuedatasize = dis.readInt();
             for(int i = 0; i < valuedatasize; i++){
@@ -148,8 +248,8 @@ public class ServerDataStorage {
     }
 
     public void saveDatabase() throws IOException {
-        System.out.println("Path to database: "+databasefile.getPath());
-        DataOutputStream dos = new DataOutputStream(new FileOutputStream(databasefile));
+        System.out.println("Path to database: "+databaseFile.getPath());
+        DataOutputStream dos = new DataOutputStream(new FileOutputStream(databaseFile));
         try {
             dos.writeInt(valueData.size()); // size of valueData
             for (String key : valueData.keySet()) {
@@ -299,7 +399,6 @@ public class ServerDataStorage {
         }
         return false;
     }
-
 
     public List<Object> getList(String key, String listkey, ListType listType) {
 
@@ -465,4 +564,6 @@ public class ServerDataStorage {
 
         return null;
     }
+
+
 }

@@ -338,7 +338,6 @@ public enum ListType{
             }
             return array;
         }
-
         @Override
         public Long[] parse(String obj) {
             if(obj.length() >= 2) {
@@ -365,4 +364,36 @@ public enum ListType{
     public abstract <T> T parse(String obj);
     public abstract void write(DataOutputStream dos, Object obj) throws IOException;
     public abstract Object read(DataInputStream dis) throws IOException;
+
+    public String asString(Object obj) {
+        String result = "";
+        if(obj instanceof JSONArray){
+            JSONArray jsonArray = (JSONArray) obj;
+            int c = 0;
+            result = "[";
+            for(Object listobj : jsonArray.toList()){
+                result += listobj;
+                if(c != jsonArray.length()-1){
+                    result +=",";
+                }
+                c++;
+            }
+            result += "]";
+        }else if(obj.getClass().isArray()){
+            Object[] array = (Object[]) obj;
+            int c = 0;
+            result = "[";
+            for (Object l : array) {
+                result += l;
+                if(c != array.length-1){
+                    result +=",";
+                }
+                c++;
+            }
+            result += "]";
+        }else{
+            result = String.valueOf(obj);
+        }
+        return result;
+    }
 }

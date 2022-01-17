@@ -36,6 +36,10 @@ public class PandaClient {
         this.simpleSocketClient.stop();
     }
 
+    public void makeDataTree(){
+        this.simpleSocketClient.sendMessage("datatree","Server", "");
+    }
+
     public void handleResult(String id, Object info){
         try {
             DataResult.Result listener = futureListener.get(id);
