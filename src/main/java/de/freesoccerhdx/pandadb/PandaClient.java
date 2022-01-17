@@ -1,5 +1,6 @@
     package de.freesoccerhdx.pandadb;
 
+import de.freesoccerhdx.pandadb.clientlisteners.ListKeysListener;
 import de.freesoccerhdx.pandadb.clientlisteners.ListListener;
 import de.freesoccerhdx.pandadb.clientlisteners.RemoveListener;
 import de.freesoccerhdx.pandadb.clientlisteners.TextListener;
@@ -25,6 +26,7 @@ public class PandaClient {
         new TextListener(this);
         new ListListener(this);
         new RemoveListener(this);
+        new ListKeysListener(this);
 
     }
     public boolean isReady(){
@@ -69,7 +71,17 @@ public class PandaClient {
                     }else{
                         listResult.result(null, false);
                     }
-
+                }else if (listener instanceof DataResult.KeysResult) {
+                    DataResult.KeysResult listResult = (DataResult.KeysResult) listener;
+                    if(info != null){
+                        if(info instanceof JSONArray){
+                            JSONArray jsonArray = (JSONArray) info;
+                            ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
+                            listResult.result(arrayList, true);
+                        }
+                    }else{
+                        listResult.result(null, false);
+                    }
 
                 }
             }
@@ -85,7 +97,9 @@ public class PandaClient {
         }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("questid", uuid.toString());
-        jsonObject.put("key", key);
+        if(key != null) {
+            jsonObject.put("key", key);
+        }
         if(member != null) {
             jsonObject.put("member", member);
         }
@@ -261,6 +275,89 @@ public class PandaClient {
             throw new IllegalArgumentException("Key, ListKey and ListType can't be null!");
         }
     }
+
+    /**
+     * Gets all Keys stored under the specific ListType
+     * */
+    public void getListKeys(ListType listType, DataResult.KeysResult keysResult){
+        if(notnull(listType)) {
+            JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
+            jsonObject.put("gettype", 0);
+            jsonObject.put("type", listType.ordinal());
+
+            this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+        }else{
+            throw new IllegalArgumentException("ListType can't be null!");
+        }
+    }
+
+    /**
+     * Gets all ListKeys stored under the specific key
+     * */
+    public void getListKeys(String key, ListType listType, DataResult.KeysResult keysResult){
+        if(notnull(key, listType)) {
+            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
+            jsonObject.put("gettype", 1);
+            jsonObject.put("type", listType.ordinal());
+
+            this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+        }else{
+            throw new IllegalArgumentException("Key and ListType can't be null!");
+        }
+    }
+
+    /**
+     * Gets all Text-Keys stored under the key
+     * */
+    public void getKeys(String key, DataResult.KeysResult keysResult){
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
+            jsonObject.put("gettype", 2);
+
+            this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+        }else{
+            throw new IllegalArgumentException("Key can't be null!");
+        }
+    }
+
+    /**
+     * Gets all Text-Keys stored
+     * */
+    public void getKeys(DataResult.KeysResult keysResult){
+
+        JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
+        jsonObject.put("gettype", 3);
+
+        this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+
+    }
+
+    /**
+     * Gets all Value-Keys stored
+     * */
+    public void getValueKeys(DataResult.KeysResult keysResult){
+
+        JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
+        jsonObject.put("gettype", 4);
+
+        this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+
+    }
+
+    /**
+     * Gets all Value-Keys stored under the key
+     * */
+    public void getValueKeys(String key, DataResult.KeysResult keysResult){
+            if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
+            jsonObject.put("gettype", 5);
+
+            this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
+        }else{
+            throw new IllegalArgumentException("Key can't be null!");
+        }
+    }
+
 
     private boolean notnull(Object... objects){
 

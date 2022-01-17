@@ -53,6 +53,15 @@ public class DataResult {
     }
 
 
+    public interface KeysResult<List> extends Result<List> {
+        void result(ArrayList<String> list, boolean successful);
+
+        @Override
+        default void result(List data, boolean successful){
+            ArrayList<Object> objects = (ArrayList<Object>) data;
+            this.result((List) objects,successful);
+        }
+    }
 
 
 }

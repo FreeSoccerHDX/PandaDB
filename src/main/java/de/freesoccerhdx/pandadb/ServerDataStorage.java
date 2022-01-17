@@ -405,4 +405,64 @@ public class ServerDataStorage {
 
         return false;
     }
+
+    public List<String> getValueKeys(String key) {
+        HashMap<String, Double> valueMemberKeys = valueData.get(key);
+
+        if(valueMemberKeys != null){
+            return new ArrayList<>(valueMemberKeys.keySet());
+        }
+
+        return null;
+    }
+
+    public List<String> getValueKeys() {
+
+        if(valueData.size() > 0){
+            return new ArrayList<>(valueData.keySet());
+        }
+
+        return null;
+    }
+
+    public List<String> getKeys() {
+        if(textData.size() > 0){
+            return new ArrayList<>(textData.keySet());
+        }
+
+        return null;
+    }
+
+    public List<String> getKeys(String key) {
+        HashMap<String, String> textMemberKeys = textData.get(key);
+
+        if(textMemberKeys != null){
+            return new ArrayList<>(textMemberKeys.keySet());
+        }
+
+        return null;
+    }
+
+    public List<String> getListKeys(ListType listType) {
+
+        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
+        if(listtypeMap != null){
+            return new ArrayList<>(listtypeMap.keySet());
+        }
+
+        return null;
+    }
+
+    public List<String> getListKeys(String key, ListType listType) {
+
+        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
+        if(listtypeMap != null){
+            HashMap<String, List<Object>> keydata = listtypeMap.get(key);
+            if(keydata != null) {
+                return new ArrayList<>(keydata.keySet());
+            }
+        }
+
+        return null;
+    }
 }

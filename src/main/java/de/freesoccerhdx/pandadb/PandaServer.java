@@ -1,5 +1,6 @@
 package de.freesoccerhdx.pandadb;
 
+import de.freesoccerhdx.pandadb.serverlisteners.ListKeysListener;
 import de.freesoccerhdx.pandadb.serverlisteners.ListListener;
 import de.freesoccerhdx.pandadb.serverlisteners.RemoveListener;
 import de.freesoccerhdx.pandadb.serverlisteners.TextListener;
@@ -21,6 +22,7 @@ public class PandaServer {
         new RemoveListener(this);
         new TextListener(this);
         new ValueListener(this);
+        new ListKeysListener(this);
     }
 
     public void listenCommands() {
