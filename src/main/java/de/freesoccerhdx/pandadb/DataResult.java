@@ -5,24 +5,28 @@ import java.util.List;
 
 public class DataResult {
 
-    interface Result<T> {
+    interface Result {
     }
 
-    private interface TypeListResult<E> extends Result<List> {
+    private interface TypeListResult<E> extends Result {
         void resultList(ArrayList<E> list, Status status);
     }
 
 
-    public interface StatusResult<Status> extends Result<Status> {
+    public interface StatusResult extends Result {
         void result(Status status);
 
     }
 
-    public interface ValueResult<Double> extends Result<Double> {
+    public interface ValueResult extends Result {
         void result(Double data, Status status);
     }
 
-    public interface TextResult<String> extends Result<String> {
+    public interface ValuesInfoResult extends Result {
+        void result(ValueDataStorage.ValueMembersInfo data, Status status);
+    }
+
+    public interface TextResult extends Result {
         void result(String data, Status status);
     }
 

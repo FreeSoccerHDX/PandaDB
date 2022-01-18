@@ -16,7 +16,7 @@ import java.util.TimerTask;
 
 public class ServerDataStorage {
 
-    private HashMap<String, HashMap<String, Double>> valueData = new HashMap<>();
+    private HashMap<String, ValueDataStorage> valueData = new HashMap<>();
     private HashMap<String, HashMap<String, String>> textData = new HashMap<>();
 
     private HashMap<ListType, HashMap<String, HashMap<String,List<Object>>>> listData = new HashMap<>();
@@ -82,18 +82,18 @@ public class ServerDataStorage {
             bw.newLine();
 
             for(String key : valueData.keySet()){
-                HashMap<String, Double> keydata = valueData.get(key);
-                bw.write("    KEY="+key + " (Size="+keydata.size()+")");
+                ValueDataStorage valueDataStorage = valueData.get(key);
+                bw.write("    KEY="+key + " (Size="+valueDataStorage.size()+")");
                 bw.newLine();
                 int maxlength = -1;
-                for(String member : keydata.keySet()){
+                for(String member : valueDataStorage.keySet()){
                     maxlength = Math.max(maxlength,member.length());
                 }
                 maxlength += 2;
-                for(String member : keydata.keySet()){
+                for(String member : valueDataStorage.keySet()){
                     int remainlength = maxlength-member.length();
                     String buffer = " ".repeat(remainlength);
-                    bw.write("        MEMBER=" +member+buffer+ "Value="+keydata.get(member));
+                    bw.write("        MEMBER=" +member+buffer+ "Value="+valueDataStorage.get(member));
                     bw.newLine();
                 }
             }
@@ -174,7 +174,7 @@ public class ServerDataStorage {
             int valuedatasize = dis.readInt();
             for(int i = 0; i < valuedatasize; i++){
                 String key = dis.readUTF();
-                HashMap<String, Double> memberMap = new HashMap<>();
+                ValueDataStorage memberMap = new ValueDataStorage();
 
                 int membersize = dis.readInt();
                 for(int a = 0; a < membersize; a++){
@@ -337,12 +337,12 @@ public class ServerDataStorage {
      * */
     public Pair<Status,Double> setValue(String key, String member, double value) {
 
-        HashMap<String, Double> keymap = valueData.get(key);
+        ValueDataStorage keymap = valueData.get(key);
         Double newvalue = null;
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
 
         if(keymap == null){
-            keymap = new HashMap<>();
+            keymap = new ValueDataStorage();
             valueData.put(key, keymap);
         }
         if(!keymap.containsKey(member)){
@@ -360,12 +360,12 @@ public class ServerDataStorage {
      * @return Pair of Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW) and new value
      * */
     public Pair<Status,Double> addValue(String key, String member, double value) {
-        HashMap<String, Double> keymap = valueData.get(key);
+        ValueDataStorage keymap = valueData.get(key);
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
         Double newvalue = null;
 
         if(keymap == null){
-            keymap = new HashMap<>();
+            keymap = new ValueDataStorage();
             valueData.put(key, keymap);
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
@@ -635,7 +635,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of Member-Keys for Values under the specific Key
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getValueKeys(String key) {
         HashMap<String, Double> valueMemberKeys = valueData.get(key);
@@ -655,7 +655,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of all Keys for Values
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(NO_KEYS_AVAILABLE/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getValueKeys() {
         Status status = Status.NO_KEYS_AVAILABLE;
@@ -674,7 +674,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of all Keys for Texts
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(NO_KEYS_AVAILABLE/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getKeys() {
         Status status = Status.NO_KEYS_AVAILABLE;
@@ -691,7 +691,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of all MemberKeys for Texts with from a specific Key
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getKeys(String key) {
         Status status = Status.KEY_NOT_FOUND;
@@ -709,7 +709,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of all Keys for a specific ListType
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getListKeys(ListType listType) {
         Status status = Status.LISTTYPE_NOT_FOUND;
@@ -726,7 +726,7 @@ public class ServerDataStorage {
     /**
      * Gets a List of all Keys for a specific ListType
      *
-     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getListKeys(String key, ListType listType) {
         Status status = Status.LISTTYPE_NOT_FOUND;
@@ -746,5 +746,22 @@ public class ServerDataStorage {
         return Pair.of(status,stringList);
     }
 
+    /**
+     * Gets the ValueMembersInfo for the given Key
+     *
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the ValueMembersInfo
+     * */
+    public Pair<Status, ValueDataStorage.ValueMembersInfo> getValuesInfo(String key, boolean withMembers) {
+        ValueDataStorage valueDataStorage = valueData.get(key);
+        ValueDataStorage.ValueMembersInfo valueMembersInfo = null;
+        Status status = Status.KEY_NOT_FOUND;
 
+        if(valueDataStorage != null){
+            valueMembersInfo = valueDataStorage.getInfo(withMembers);
+            status = Status.SUCCESSFUL;
+        }
+
+
+        return Pair.of(status,valueMembersInfo);
+    }
 }

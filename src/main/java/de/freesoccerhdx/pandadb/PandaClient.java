@@ -45,19 +45,22 @@ public class PandaClient {
             DataResult.Result listener = futureListener.get(id);
             if (listener != null) {
                 if (listener instanceof DataResult.ValueResult) {
-                    DataResult.ValueResult<Double> valueListener = (DataResult.ValueResult<Double>) listener;
+                    DataResult.ValueResult valueListener = (DataResult.ValueResult) listener;
                     if(info == null){
                         valueListener.result(null, status);
                     }else {
                         valueListener.result((Double) info, status);
                     }
+                }else if (listener instanceof DataResult.ValuesInfoResult) {
+                    DataResult.ValuesInfoResult valuesInfoResult = (DataResult.ValuesInfoResult) listener;
+                    valuesInfoResult.result((ValueDataStorage.ValueMembersInfo) info, status);
 
                 }else if (listener instanceof DataResult.StatusResult) {
                     DataResult.StatusResult setResult = (DataResult.StatusResult) listener;
                     setResult.result(status);
 
                 }else if (listener instanceof DataResult.TextResult) {
-                    DataResult.TextResult<String> textResult = (DataResult.TextResult<String>) listener;
+                    DataResult.TextResult textResult = (DataResult.TextResult) listener;
                     if(info == null){
                         textResult.result(null, status);
                     }else {
@@ -172,7 +175,7 @@ public class PandaClient {
     /**
      * Gets the specific value or null if not set
      * */
-    public void getValue(String key, String member, DataResult.ValueResult<Double> future){
+    public void getValue(String key, String member, DataResult.ValueResult future){
         if(notnull(key,member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, future);
             this.simpleSocketClient.sendMessage("getvalue","Server", jsonObject.toString());
@@ -184,7 +187,7 @@ public class PandaClient {
     /**
      * Sets the specific value
      * */
-    public void setValue(String key, String member, double value, DataResult.ValueResult<Double> valueResult){
+    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult){
         if(notnull(key,member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
             jsonObject.put("value", value);
@@ -197,7 +200,7 @@ public class PandaClient {
     /**
      * Add/Subtract the specific value
      * */
-    public void addValue(String key, String member, double value, DataResult.ValueResult<Double> valueResult){
+    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult){
         if(notnull(key,member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
             jsonObject.put("value", value);
@@ -351,7 +354,7 @@ public class PandaClient {
      * Gets all Value-Keys stored under the key
      * */
     public void getValueKeys(String key, DataResult.KeysResult keysResult){
-            if(notnull(key)) {
+        if(notnull(key)) {
             JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
             jsonObject.put("gettype", 5);
 
@@ -360,6 +363,19 @@ public class PandaClient {
             throw new IllegalArgumentException("Key can't be null!");
         }
     }
+
+    public void getValuesMemberInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult){
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key,null, valuesInfoResult);
+            if(withKeys){
+                jsonObject.put("k", true);
+            }
+            this.simpleSocketClient.sendMessage("infovalues", "Server", jsonObject.toString());
+        }else{
+            throw new IllegalArgumentException("Key can't be null!");
+        }
+    }
+
 
 
     private boolean notnull(Object... objects){
