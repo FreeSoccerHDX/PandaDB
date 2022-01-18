@@ -120,9 +120,9 @@ public class ServerDataStorage {
             bw.newLine();
             for(ListType listType : ListType.values()){
                 if(listData.containsKey(listType)){
-                    bw.write("    "+listType+"(Size="+textData.size()+"):");
-                    bw.newLine();
                     HashMap<String, HashMap<String, List<Object>>> listkeys = listData.get(listType);
+                    bw.write("    "+listType+"(Size="+listkeys.size()+"):");
+                    bw.newLine();
                     for(String key : listkeys.keySet()){
                         HashMap<String, List<Object>> keyData = listkeys.get(key);
 
@@ -306,42 +306,83 @@ public class ServerDataStorage {
 
     }
 
-    public Double getValue(String key, String member) {
+    /**
+     * Gets the value for the specific key and member
+     *
+     * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and value
+     * */
+    public Pair<Status,Double> getValue(String key, String member) {
 
         HashMap<String, Double> keymap = valueData.get(key);
+        Double val = null;
+        Status status = Status.KEY_NOT_FOUND;
+
         if(keymap != null){
-            return keymap.get(member);
+
+            val = keymap.get(member);
+            if(val == null){
+                status = Status.MEMBER_NOT_FOUND;
+            }else{
+                status = Status.SUCCESSFUL;
+            }
         }
 
-        return null;
+        return Pair.of(status, val);
     }
 
-    public Double setValue(String key, String member, double value) {
+    /**
+     * Sets the value for the specific key and member
+     *
+     * @return Pair of Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW) and new value
+     * */
+    public Pair<Status,Double> setValue(String key, String member, double value) {
 
         HashMap<String, Double> keymap = valueData.get(key);
+        Double newvalue = null;
+        Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
+
         if(keymap == null){
             keymap = new HashMap<>();
             valueData.put(key, keymap);
+        }
+        if(!keymap.containsKey(member)){
+            status = Status.SUCCESSFUL_CREATED_NEW;
         }
         keymap.put(member, value);
         haschanged = true;
-        return value;
+
+        return Pair.of(status, newvalue);
     }
 
-    public Double addValue(String key, String member, double value) {
+    /**
+     * Adds the value for the specific key and member (and creates the new if not set before)
+     *
+     * @return Pair of Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW) and new value
+     * */
+    public Pair<Status,Double> addValue(String key, String member, double value) {
         HashMap<String, Double> keymap = valueData.get(key);
+        Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
+        Double newvalue = null;
+
         if(keymap == null){
             keymap = new HashMap<>();
             valueData.put(key, keymap);
+            status = Status.SUCCESSFUL_CREATED_NEW;
         }
         Double prevalue = keymap.get(member);
-        double newvalue = value + ((prevalue == null) ? 0 : prevalue);
+        newvalue = value + ((prevalue == null) ? 0 : prevalue);
         keymap.put(member, newvalue);
+
         haschanged = true;
-        return newvalue;
+        return Pair.of(status, newvalue);
     }
 
-    public boolean removeValue(String key, String member) {
+    /**
+     * Removes the member from the key with his value
+     *
+     * @return Status(SUCCESSFUL_REMOVED_MEMBER/MEMBER_NOT_FOUND/KEY_NOT_FOUND)
+     * */
+    public Status removeValue(String key, String member) {
         HashMap<String, Double> keymap = valueData.get(key);
         if(keymap != null){
             boolean erfolg = keymap.remove(member) != null;
@@ -349,15 +390,24 @@ public class ServerDataStorage {
             if(keymap.size() == 0){
                 valueData.remove(key);
             }
-            haschanged = true;
-            return erfolg;
+
+            if(erfolg){
+                haschanged = true;
+                return Status.SUCCESSFUL_REMOVED_MEMBER;
+            }
+            return Status.MEMBER_NOT_FOUND;
         }
 
 
-        return false;
+        return Status.KEY_NOT_FOUND;
     }
 
-    public boolean remove(String key, String member) {
+    /**
+     * Removes the member from the key with his text
+     *
+     * @return Status(SUCCESSFUL_REMOVED_MEMBER/MEMBER_NOT_FOUND/KEY_NOT_FOUND)
+     * */
+    public Status remove(String key, String member) {
         HashMap<String, String> keymap = textData.get(key);
         if(keymap != null){
             boolean erfolg = keymap.remove(member) != null;
@@ -365,83 +415,125 @@ public class ServerDataStorage {
             if(keymap.size() == 0){
                 textData.remove(key);
             }
-            haschanged = true;
-            return erfolg;
+            if(erfolg){
+                haschanged = true;
+                return Status.SUCCESSFUL_REMOVED_MEMBER;
+            }
+
+            return Status.MEMBER_NOT_FOUND;
         }
 
-        return false;
+        return Status.KEY_NOT_FOUND;
     }
 
-    public String get(String key, String member) {
+    /**
+     * Gets the stored text for the specific key and member
+     *
+     * @return Status(KEY_NOT_FOUND/MEMBER_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,String> get(String key, String member) {
+        String text = null;
+        Status status = Status.KEY_NOT_FOUND;
         try {
             HashMap<String, String> keymap = textData.get(key);
             if (keymap != null) {
-                return keymap.get(member);
+                text = keymap.get(member);
+                if(text == null){
+                    status = Status.MEMBER_NOT_FOUND;
+                }else{
+                    status = Status.SUCCESSFUL;
+                }
             }
         }catch (Exception exception){
             exception.printStackTrace();
         }
-        return null;
+        return Pair.of(status,text);
     }
 
-    public boolean set(String key, String member, String value) {
-        try {
-            HashMap<String, String> keymap = textData.get(key);
-            if (keymap == null) {
-                keymap = new HashMap<>();
-                textData.put(key, keymap);
-            }
-            keymap.put(member, value);
-            haschanged = true;
-            return true;
-        }catch (Exception exception){
-            exception.printStackTrace();
+    /**
+     * Sets for the given key and member the specific text
+     *
+     * @return Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW)
+     * */
+    public Status set(String key, String member, String value) {
+        HashMap<String, String> keymap = textData.get(key);
+        Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
+        if (keymap == null) {
+            keymap = new HashMap<>();
+            textData.put(key, keymap);
         }
-        return false;
+        if(!keymap.containsKey(member)){
+            status = Status.SUCCESSFUL_CREATED_NEW;
+        }
+        keymap.put(member, value);
+        haschanged = true;
+        return status;
     }
 
-    public List<Object> getList(String key, String listkey, ListType listType) {
+    /**
+     * Gets a stored List under the specific ListType, Key and ListKey
+     *
+     * @return Pair of Status(LISTTYPE_NOT_FOUND/LISTKEY_NOT_FOUND/SUCCESSFUL/KEY_NOT_FOUND) and stored List(or null)
+     * */
+    public Pair<Status,List<Object>> getList(String key, String listkey, ListType listType) {
+        List<Object> objectList = null;
+        Status status = Status.LISTTYPE_NOT_FOUND;
 
         HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
         if(typeData != null){
             HashMap<String, List<Object>> listkeydata = typeData.get(key);
             if(listkeydata != null){
-                return listkeydata.get(listkey);
+                objectList = listkeydata.get(listkey);
+                if(objectList == null){
+                    status = Status.LISTKEY_NOT_FOUND;
+                }else{
+                    status = Status.SUCCESSFUL;
+                }
+            }else{
+                status = Status.KEY_NOT_FOUND;
             }
         }
 
-        return null;
+        return Pair.of(status,objectList);
     }
 
-    public boolean addListEntry(String key, String listkey, ListType listType, Object value) {
-        try {
-            HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
-            if (typeData == null) {
-                typeData = new HashMap<>();
-                listData.put(listType, typeData);
-            }
-            HashMap<String, List<Object>> listkeydata = typeData.get(key);
-            if (listkeydata == null) {
-                listkeydata = new HashMap<>();
-                typeData.put(key, listkeydata);
-            }
-            List<Object> objects = listkeydata.get(listkey);
-            if(objects == null){
-                objects = new ArrayList<>();
-                listkeydata.put(listkey,objects);
-            }
-            haschanged = true;
-            objects.add(value);
-            return true;
+    /**
+     * Adds an Object to the specific ListKey under the Key and ListType
+     *
+     * @return Status(LISTTYPE_NOT_FOUND/LISTKEY_NOT_FOUND/SUCCESSFUL/KEY_NOT_FOUND)
+     * */
+    public Status addListEntry(String key, String listkey, ListType listType, Object value) {
+        Status status = Status.SUCCESSFUL_ADD_ENTRY;
 
-        }catch (Exception exception){
-            exception.printStackTrace();
-        }
-        return false;
-    }
-
-    public boolean removeList(String key, String listkey, ListType listType) {
         HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
+        if (typeData == null) {
+            typeData = new HashMap<>();
+            listData.put(listType, typeData);
+        }
+        HashMap<String, List<Object>> listkeydata = typeData.get(key);
+        if (listkeydata == null) {
+            listkeydata = new HashMap<>();
+            typeData.put(key, listkeydata);
+        }
+        List<Object> objects = listkeydata.get(listkey);
+        if(objects == null){
+            objects = new ArrayList<>();
+            listkeydata.put(listkey,objects);
+            status = Status.SUCCESSFUL_CREATED_NEW;
+        }
+        haschanged = true;
+        objects.add(value);
+        return status;
+    }
+
+    /**
+     * Removes the specific ListKey by ListType and Key
+     *
+     * @return Status(LISTTYPE_NOT_FOUND/SUCCESSFUL_REMOVED_LISTKEY/LISTKEY_NOT_FOUND/KEY_NOT_FOUND)
+     * */
+    public Status removeList(String key, String listkey, ListType listType) {
+        HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
+        Status status = Status.LISTTYPE_NOT_FOUND;
         if(typeData != null){
             HashMap<String, List<Object>> keydata = typeData.get(key);
             if(keydata != null) {
@@ -454,16 +546,30 @@ public class ServerDataStorage {
                     listData.remove(listType);
                 }
                 haschanged = true;
-                return erfolg;
+
+                if(erfolg){
+                    status = Status.SUCCESSFUL_REMOVED_LISTKEY;
+                }else{
+                    status = Status.LISTKEY_NOT_FOUND;
+                }
+
+            }else{
+                status = Status.KEY_NOT_FOUND;
             }
         }
 
 
-        return false;
+        return status;
     }
 
-    public boolean removeListIndex(String key, String listkey, ListType listType, int index) {
+    /**
+     * Removes the specific Index in a List by ListType, Key and ListKey
+     *
+     * @return Status(LISTTYPE_NOT_FOUND/SUCCESSFUL_REMOVED_LISTINDEX/LISTINDEX_NOT_FOUND/LISTKEY_NOT_FOUND/KEY_NOT_FOUND)
+     * */
+    public Status removeListIndex(String key, String listkey, ListType listType, int index) {
         HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
+        Status status = Status.LISTTYPE_NOT_FOUND;
         if(typeData != null){
             HashMap<String, List<Object>> keydata = typeData.get(key);
             if(keydata != null) {
@@ -481,88 +587,163 @@ public class ServerDataStorage {
                         listData.remove(listType);
                     }
                     haschanged = true;
-                    return erfolg;
+
+                    if(erfolg){
+                        status = Status.SUCCESSFUL_REMOVED_LISTINDEX;
+                    }else{
+                        status = Status.LISTINDEX_NOT_FOUND;
+                    }
+                }else{
+                    status = Status.LISTKEY_NOT_FOUND;
                 }
+            }else{
+                status = Status.KEY_NOT_FOUND;
             }
         }
 
-        return false;
+        return status;
     }
 
-    public boolean removeList(String key, ListType listType) {
+    /**
+     * Removes the specific Key for an ListKey
+     *
+     * @return Status(LISTTYPE_NOT_FOUND/SUCCESSFUL_REMOVED_KEY/LISTKEY_NOT_FOUND)
+     * */
+    public Status removeList(String key, ListType listType) {
+        Status status = Status.LISTTYPE_NOT_FOUND;
         HashMap<String, HashMap<String, List<Object>>> typeData = listData.get(listType);
+
         if(typeData != null){
             boolean erfolg = typeData.remove(key) != null;
 
             if(typeData.size() == 0){
                 listData.remove(listType);
             }
-            haschanged = true;
-            return erfolg;
-        }
 
-
-        return false;
-    }
-
-    public List<String> getValueKeys(String key) {
-        HashMap<String, Double> valueMemberKeys = valueData.get(key);
-
-        if(valueMemberKeys != null){
-            return new ArrayList<>(valueMemberKeys.keySet());
-        }
-
-        return null;
-    }
-
-    public List<String> getValueKeys() {
-
-        if(valueData.size() > 0){
-            return new ArrayList<>(valueData.keySet());
-        }
-
-        return null;
-    }
-
-    public List<String> getKeys() {
-        if(textData.size() > 0){
-            return new ArrayList<>(textData.keySet());
-        }
-
-        return null;
-    }
-
-    public List<String> getKeys(String key) {
-        HashMap<String, String> textMemberKeys = textData.get(key);
-
-        if(textMemberKeys != null){
-            return new ArrayList<>(textMemberKeys.keySet());
-        }
-
-        return null;
-    }
-
-    public List<String> getListKeys(ListType listType) {
-
-        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
-        if(listtypeMap != null){
-            return new ArrayList<>(listtypeMap.keySet());
-        }
-
-        return null;
-    }
-
-    public List<String> getListKeys(String key, ListType listType) {
-
-        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
-        if(listtypeMap != null){
-            HashMap<String, List<Object>> keydata = listtypeMap.get(key);
-            if(keydata != null) {
-                return new ArrayList<>(keydata.keySet());
+            if(erfolg){
+                status = Status.SUCCESSFUL_REMOVED_KEY;
+                haschanged = true;
+            }else{
+                status = Status.LISTKEY_NOT_FOUND;
             }
         }
 
-        return null;
+
+        return status;
+    }
+
+    /**
+     * Gets a List of Member-Keys for Values under the specific Key
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getValueKeys(String key) {
+        HashMap<String, Double> valueMemberKeys = valueData.get(key);
+        Status status = Status.KEY_NOT_FOUND;
+        List<String> stringList = null;
+
+        if(valueMemberKeys != null){
+            stringList = new ArrayList<>(valueMemberKeys.keySet());
+            if(stringList != null){
+                status = Status.SUCCESSFUL;
+            }
+        }
+
+        return Pair.of(status,stringList);
+    }
+
+    /**
+     * Gets a List of all Keys for Values
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getValueKeys() {
+        Status status = Status.NO_KEYS_AVAILABLE;
+        List<String> stringList = null;
+
+        if(valueData.size() > 0){
+            stringList = new ArrayList<>(valueData.keySet());
+            if(stringList != null){
+                status = Status.SUCCESSFUL;
+            }
+        }
+
+        return Pair.of(status,stringList);
+    }
+
+    /**
+     * Gets a List of all Keys for Texts
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getKeys() {
+        Status status = Status.NO_KEYS_AVAILABLE;
+        List<String> stringList = null;
+
+        if(textData.size() > 0){
+            stringList = new ArrayList<>(textData.keySet());
+            status = Status.SUCCESSFUL;
+        }
+
+        return Pair.of(status,stringList);
+    }
+
+    /**
+     * Gets a List of all MemberKeys for Texts with from a specific Key
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getKeys(String key) {
+        Status status = Status.KEY_NOT_FOUND;
+        List<String> stringList = null;
+        HashMap<String, String> textMemberKeys = textData.get(key);
+
+        if(textMemberKeys != null){
+            stringList = new ArrayList<>(textMemberKeys.keySet());
+            status = Status.SUCCESSFUL;
+        }
+
+        return Pair.of(status,stringList);
+    }
+
+    /**
+     * Gets a List of all Keys for a specific ListType
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getListKeys(ListType listType) {
+        Status status = Status.LISTTYPE_NOT_FOUND;
+        List<String> stringList = null;
+        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
+        if(listtypeMap != null){
+            stringList = new ArrayList<>(listtypeMap.keySet());
+            status = Status.SUCCESSFUL;
+        }
+
+        return Pair.of(status,stringList);
+    }
+
+    /**
+     * Gets a List of all Keys for a specific ListType
+     *
+     * @return Status(KEY_NOT_FOUND/SUCCESSFUL)
+     * */
+    public Pair<Status,List<String>> getListKeys(String key, ListType listType) {
+        Status status = Status.LISTTYPE_NOT_FOUND;
+        List<String> stringList = null;
+        HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
+
+        if(listtypeMap != null){
+            HashMap<String, List<Object>> keydata = listtypeMap.get(key);
+            if(keydata != null) {
+                stringList = new ArrayList<>(keydata.keySet());
+                status = Status.SUCCESSFUL;
+            }else{
+                status = Status.KEY_NOT_FOUND;
+            }
+        }
+
+        return Pair.of(status,stringList);
     }
 
 

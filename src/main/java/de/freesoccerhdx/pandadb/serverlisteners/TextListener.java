@@ -1,6 +1,8 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
+import de.freesoccerhdx.pandadb.Pair;
 import de.freesoccerhdx.pandadb.PandaServer;
+import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.server.ClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
@@ -24,11 +26,11 @@ public class TextListener extends ServerListener {
         String member = jsonObject.getString("member");
 
         if(channel.equals("get")) {
-            String value = pandaServer.getDataStorage().get(key, member);
+            Pair<Status, String> value = pandaServer.getDataStorage().get(key, member);
             sendTextFeedback(clientSocket, questid, value);
         }else if(channel.equals("set")) {
             String value = jsonObject.getString("value");
-            boolean erfolg = pandaServer.getDataStorage().set(key, member, value);
+            Status erfolg = pandaServer.getDataStorage().set(key, member, value);
             sendTextFeedback(clientSocket, questid, erfolg);
         }
     }
@@ -38,7 +40,13 @@ public class TextListener extends ServerListener {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             if (info != null) {
-                jsonObject.put("info", info);
+                if(info instanceof Status) {
+                    jsonObject.put("s", ((Status) info).ordinal());
+                }else{
+                    Pair<Status,String> pair = (Pair<Status, String>) info;
+                    jsonObject.put("s", pair.getFirst().ordinal());
+                    jsonObject.put("info", pair.getSecond());
+                }
             }
             clientSocket.sendNewMessage("textfeedback", jsonObject.toString(), null);
         }

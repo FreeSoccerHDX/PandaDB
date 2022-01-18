@@ -1,7 +1,9 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
 import de.freesoccerhdx.pandadb.ListType;
+import de.freesoccerhdx.pandadb.Pair;
 import de.freesoccerhdx.pandadb.PandaServer;
+import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.server.ClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
@@ -29,12 +31,12 @@ public class ListListener extends ServerListener {
         ListType listType = ListType.values()[id];
 
         if(channel.equals("getlist")) {
-            List<?> value = pandaServer.getDataStorage().getList(key, listkey, listType);
-            sendListFeedback(clientSocket, questid, value);
+            Pair<Status, List<Object>> pair = pandaServer.getDataStorage().getList(key, listkey, listType);
+            sendListFeedback(clientSocket, questid, pair);
         }else if(channel.equals("addlist")) {
             Object value = jsonObject.get("value");
-            boolean erfolg = pandaServer.getDataStorage().addListEntry(key, listkey, listType, value);
-            sendListFeedback(clientSocket, questid, erfolg);
+            Status status = pandaServer.getDataStorage().addListEntry(key, listkey, listType, value);
+            sendListFeedback(clientSocket, questid, status);
         }
     }
 
@@ -43,7 +45,14 @@ public class ListListener extends ServerListener {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             if (info != null) {
-                jsonObject.put("info", info);
+                if(info instanceof Status){
+                    jsonObject.put("s", ((Status) info).ordinal());
+                }else{
+                    Pair<Status, List<Object>> pair = (Pair<Status, List<Object>>) info;
+                    jsonObject.put("s", pair.getFirst().ordinal());
+                    jsonObject.put("info", pair.getSecond());
+                }
+
             }
             clientSocket.sendNewMessage("listfeedback", jsonObject.toString(), null);
         }

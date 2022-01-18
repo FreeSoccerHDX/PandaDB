@@ -1,67 +1,41 @@
 package de.freesoccerhdx.pandadb;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class DataResult {
 
     interface Result<T> {
-        void result(T data, boolean successful);
     }
 
-    public interface SetResult<Boolean> extends Result<Boolean>{
-        void result(boolean successful);
-
-        default void result(Boolean data, boolean successful) {
-        }
+    private interface TypeListResult<E> extends Result<List> {
+        void resultList(ArrayList<E> list, Status status);
     }
 
-    public interface RemoveResult<Boolean> extends Result<Boolean>{
-        void result(boolean successful);
 
-        default void result(Boolean data, boolean successful) {
+    public interface StatusResult<Status> extends Result<Status> {
+        void result(Status status);
 
-        }
-    }
-
-    public interface AddListResult<Boolean> extends Result<Boolean>{
-        void result(boolean successful);
-
-        default void result(Boolean data, boolean successful) {
-
-        }
     }
 
     public interface ValueResult<Double> extends Result<Double> {
-        @Override
-        void result(Double data, boolean successful);
+        void result(Double data, Status status);
     }
 
     public interface TextResult<String> extends Result<String> {
-        @Override
-        void result(String data, boolean successful);
+        void result(String data, Status status);
     }
 
 
-    public interface ListResult<List> extends Result<List> {
-        void result(ArrayList<Object> data, boolean successful);
+    public interface ListResult<E> extends TypeListResult<E> {
+        void resultList(ArrayList<E> data, Status status);
+    }
 
-        @Override
-        default void result(List data, boolean successful){
-            ArrayList<Object> objects = (ArrayList<Object>) data;
-            this.result(objects,successful);
-        }
+    public interface KeysResult<String> extends TypeListResult<String> {
+        void resultList(ArrayList<String> data, Status status);
     }
 
 
-    public interface KeysResult<List> extends Result<List> {
-        void result(ArrayList<String> list, boolean successful);
-
-        @Override
-        default void result(List data, boolean successful){
-            ArrayList<Object> objects = (ArrayList<Object>) data;
-            this.result((List) objects,successful);
-        }
-    }
 
 
 }

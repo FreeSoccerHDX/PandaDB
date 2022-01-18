@@ -2,6 +2,7 @@ package de.freesoccerhdx.pandadb.serverlisteners;
 
 import de.freesoccerhdx.pandadb.ListType;
 import de.freesoccerhdx.pandadb.PandaServer;
+import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.server.ClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
@@ -22,39 +23,39 @@ public class RemoveListener extends ServerListener {
         String questid = jsonObject.has("questid") ? jsonObject.getString("questid") : null;
         String key = jsonObject.getString("key");
         int removeTypeId = jsonObject.getInt("removetype"); //0=value, 1=text, 2=list(listkey), 3=listIndex(listkey), 4=list(list and all sub-listkeys)
-        boolean erfolg = false;
+        Status status = null;
 
         if(removeTypeId == 0){
             String member = jsonObject.getString("member");
-            erfolg = pandaServer.getDataStorage().removeValue(key, member);
+            status = pandaServer.getDataStorage().removeValue(key, member);
         }else if(removeTypeId == 1){
             String member = jsonObject.getString("member");
-            erfolg = pandaServer.getDataStorage().remove(key, member);
+            status = pandaServer.getDataStorage().remove(key, member);
         }else if(removeTypeId == 2){
             int id = jsonObject.getInt("type");
             String listkey = jsonObject.getString("listkey");
             ListType listType = ListType.values()[id];
-            erfolg = pandaServer.getDataStorage().removeList(key, listkey, listType);
+            status = pandaServer.getDataStorage().removeList(key, listkey, listType);
         }else if(removeTypeId == 3){
             int id = jsonObject.getInt("type");
             int index = jsonObject.getInt("index");
             String listkey = jsonObject.getString("listkey");
             ListType listType = ListType.values()[id];
-            erfolg = pandaServer.getDataStorage().removeListIndex(key, listkey, listType, index);
+            status = pandaServer.getDataStorage().removeListIndex(key, listkey, listType, index);
         }else if(removeTypeId == 4){
             int id = jsonObject.getInt("type");
             ListType listType = ListType.values()[id];
-            erfolg = pandaServer.getDataStorage().removeList(key, listType);
+            status = pandaServer.getDataStorage().removeList(key, listType);
         }
 
-        sendRemoveFeedback(clientSocket, questid, erfolg);
+        sendRemoveFeedback(clientSocket, questid, status);
     }
 
-    private void sendRemoveFeedback(ClientSocket clientSocket, String questid, boolean info){
+    private void sendRemoveFeedback(ClientSocket clientSocket, String questid, Status status){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
-            jsonObject.put("info", info);
+            jsonObject.put("s", status.ordinal());
 
             clientSocket.sendNewMessage("removefeedback", jsonObject.toString(), null);
         }

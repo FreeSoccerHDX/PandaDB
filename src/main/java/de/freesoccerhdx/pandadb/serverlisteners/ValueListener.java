@@ -1,6 +1,8 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
+import de.freesoccerhdx.pandadb.Pair;
 import de.freesoccerhdx.pandadb.PandaServer;
+import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.server.ClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
@@ -25,25 +27,27 @@ public class ValueListener extends ServerListener {
         String member = jsonObject.getString("member");
 
         if(channel.equals("getvalue")) {
-            Double value = pandaServer.getDataStorage().getValue(key, member);
+            Pair<Status, Double> value = pandaServer.getDataStorage().getValue(key, member);
             sendValueFeedback(clientSocket, questid, value);
         }else if(channel.equals("setvalue")) {
             Double value = jsonObject.getDouble("value");
-            Double erfolg = pandaServer.getDataStorage().setValue(key, member, value);
+            Pair<Status, Double> erfolg = pandaServer.getDataStorage().setValue(key, member, value);
             sendValueFeedback(clientSocket, questid, erfolg);
         }else if(channel.equals("addvalue")){
             Double value = jsonObject.getDouble("value");
-            Double erfolg = pandaServer.getDataStorage().addValue(key, member, value);
+            Pair<Status, Double> erfolg = pandaServer.getDataStorage().addValue(key, member, value);
             sendValueFeedback(clientSocket, questid, erfolg);
         }
     }
 
-    private void sendValueFeedback(ClientSocket clientSocket, String questid, Double info){
+    private void sendValueFeedback(ClientSocket clientSocket, String questid, Pair<Status, Double> info){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
-            if (info != null) {
-                jsonObject.put("info", info);
+            jsonObject.put("s", info.getFirst().ordinal());
+            Double value = info.getSecond();
+            if (value != null) {
+                jsonObject.put("info", value);
             }
             clientSocket.sendNewMessage("valuefeedback", jsonObject.toString(), null);
         }

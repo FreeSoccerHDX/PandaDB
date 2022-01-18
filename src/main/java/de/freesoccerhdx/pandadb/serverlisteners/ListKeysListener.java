@@ -1,7 +1,9 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
 import de.freesoccerhdx.pandadb.ListType;
+import de.freesoccerhdx.pandadb.Pair;
 import de.freesoccerhdx.pandadb.PandaServer;
+import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.server.ClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
@@ -24,7 +26,7 @@ public class ListKeysListener extends ServerListener {
         JSONObject jsonObject = new JSONObject(message);
         String questid = jsonObject.has("questid") ? jsonObject.getString("questid") : null;
         int gettype = jsonObject.getInt("gettype");
-        List<String> list = null;
+        Pair<Status, List<String>> list = null;
 
         if(gettype == 0){ // getListKeys
             int listtypeID = jsonObject.getInt("type");
@@ -51,12 +53,13 @@ public class ListKeysListener extends ServerListener {
 
     }
 
-    private <T> void sendListKeysFeedback(ClientSocket clientSocket, String questid, List<String> info){
+    private <T> void sendListKeysFeedback(ClientSocket clientSocket, String questid, Pair<Status,List<String>> pair){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
-            if (info != null) {
-                jsonObject.put("info", info);
+            jsonObject.put("s", pair.getFirst().ordinal());
+            if (pair.getSecond() != null) {
+                jsonObject.put("info", pair.getSecond());
             }
             clientSocket.sendNewMessage("listkeysfeedback", jsonObject.toString(), null);
         }

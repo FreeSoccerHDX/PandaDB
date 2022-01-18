@@ -40,40 +40,39 @@ public class PandaClient {
         this.simpleSocketClient.sendMessage("datatree","Server", "");
     }
 
-    public void handleResult(String id, Object info){
+    public void handleResult(String id, Status status, Object info){
         try {
             DataResult.Result listener = futureListener.get(id);
             if (listener != null) {
                 if (listener instanceof DataResult.ValueResult) {
                     DataResult.ValueResult<Double> valueListener = (DataResult.ValueResult<Double>) listener;
-                    valueListener.result((Double) info, info != null);
+                    if(info == null){
+                        valueListener.result(null, status);
+                    }else {
+                        valueListener.result((Double) info, status);
+                    }
 
-                }else if (listener instanceof DataResult.SetResult) {
-                    DataResult.SetResult<Boolean> setResult = (DataResult.SetResult<Boolean>) listener;
-                    setResult.result((Boolean) info);
+                }else if (listener instanceof DataResult.StatusResult) {
+                    DataResult.StatusResult setResult = (DataResult.StatusResult) listener;
+                    setResult.result(status);
 
                 }else if (listener instanceof DataResult.TextResult) {
                     DataResult.TextResult<String> textResult = (DataResult.TextResult<String>) listener;
-                    textResult.result((String) info, info != null);
-
-                }else if (listener instanceof DataResult.AddListResult) {
-                    DataResult.AddListResult<Boolean> addListResult = (DataResult.AddListResult<Boolean>) listener;
-                    addListResult.result(info != null);
-
-                }else if (listener instanceof DataResult.RemoveResult) {
-                    DataResult.RemoveResult<Boolean> removeResult = (DataResult.RemoveResult<Boolean>) listener;
-                    removeResult.result((Boolean)info);
-
+                    if(info == null){
+                        textResult.result(null, status);
+                    }else {
+                        textResult.result((String) info, status);
+                    }
                 }else if (listener instanceof DataResult.ListResult) {
                     DataResult.ListResult listResult = (DataResult.ListResult) listener;
                     if(info != null){
                         if(info instanceof JSONArray){
                             JSONArray jsonArray = (JSONArray) info;
                             ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
-                            listResult.result(arrayList, true);
+                            listResult.resultList(arrayList, status);
                         }
                     }else{
-                        listResult.result(null, false);
+                        listResult.resultList(null, status);
                     }
                 }else if (listener instanceof DataResult.KeysResult) {
                     DataResult.KeysResult listResult = (DataResult.KeysResult) listener;
@@ -81,10 +80,10 @@ public class PandaClient {
                         if(info instanceof JSONArray){
                             JSONArray jsonArray = (JSONArray) info;
                             ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
-                            listResult.result(arrayList, true);
+                            listResult.resultList(arrayList, status);
                         }
                     }else{
-                        listResult.result(null, false);
+                        listResult.resultList(null, status);
                     }
 
                 }
@@ -94,7 +93,7 @@ public class PandaClient {
         }
     }
 
-    private JSONObject prepareValuePacket(String key, String member, DataResult.Result<?> future) {
+    private JSONObject prepareValuePacket(String key, String member, DataResult.Result future) {
         UUID uuid = UUID.randomUUID();
         if(future != null) {
             futureListener.put(uuid.toString(), (DataResult.Result) future);
@@ -114,7 +113,7 @@ public class PandaClient {
     /**
      * Adds the value to the list(or new created list), if the type is the same or the list new
      * */
-    public <T> void addListEntry(String key, String listkey, ListType listType, T value, DataResult.AddListResult addListResult){
+    public <T> void addListEntry(String key, String listkey, ListType listType, T value, DataResult.StatusResult addListResult){
         if(notnull(key,listType,value)) {
             if (validateListType(listType, value)) {
                 JSONObject jsonObject = prepareValuePacket(key, null, addListResult);
@@ -160,7 +159,7 @@ public class PandaClient {
     /**
      * Sets a specific text
      * */
-    public void set(String key, String member, String value, DataResult.SetResult setResult){
+    public void set(String key, String member, String value, DataResult.StatusResult setResult){
         if(notnull(key,member,value)) {
             JSONObject jsonObject = prepareValuePacket(key, member, setResult);
             jsonObject.put("value", value);
@@ -211,7 +210,7 @@ public class PandaClient {
     /**
      * Remove a specific value
      * */
-    public void removeValue(String key, String member, DataResult.RemoveResult removeResult){
+    public void removeValue(String key, String member, DataResult.StatusResult removeResult){
         if(notnull(key,member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, removeResult);
             jsonObject.put("removetype", 0);
@@ -224,7 +223,7 @@ public class PandaClient {
     /**
      * Remove a specific set text
      * */
-    public void remove(String key, String member, DataResult.RemoveResult removeResult){
+    public void remove(String key, String member, DataResult.StatusResult removeResult){
         if(notnull(key,member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, removeResult);
             jsonObject.put("removetype", 1);
@@ -237,7 +236,7 @@ public class PandaClient {
     /**
      * Remove a specific list within a key
      * */
-    public void removeList(String key, String listkey, ListType listType, DataResult.RemoveResult removeResult){
+    public void removeList(String key, String listkey, ListType listType, DataResult.StatusResult removeResult){
         if(notnull(key,listkey,listType)) {
             JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
             jsonObject.put("removetype", 2);
@@ -252,7 +251,7 @@ public class PandaClient {
     /**
      * Remove a specific key that stores lists
      * */
-    public void removeList(String key, ListType listType, DataResult.RemoveResult removeResult){
+    public void removeList(String key, ListType listType, DataResult.StatusResult removeResult){
         if(notnull(key,listType)) {
             JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
             jsonObject.put("removetype", 4);
@@ -266,7 +265,7 @@ public class PandaClient {
     /**
      * Remove a specific index within a list of an key
      * */
-    public void removeListIndex(String key, String listkey, ListType listType, int index, DataResult.RemoveResult removeResult){
+    public void removeListIndex(String key, String listkey, ListType listType, int index, DataResult.StatusResult removeResult){
         if(notnull(key,listkey,listType)) {
             JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
             jsonObject.put("removetype", 3);
