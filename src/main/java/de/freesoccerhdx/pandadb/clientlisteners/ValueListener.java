@@ -34,15 +34,16 @@ public class ValueListener extends ClientListener {
             this.pandaClient.handleResult(id, status, info);
         }else if(channel.equals("valueinfofeedback")) {
             ValueDataStorage.ValueMembersInfo vmi = null;
-            if(jsonObject.has("avr")){
-                double avr = jsonObject.getDouble("avr");
-                double low = jsonObject.getDouble("low");
-                double high = jsonObject.getDouble("high");
-                int size = jsonObject.getInt("size");
+            if(jsonObject.has("info")){
+                JSONObject vmiJSON = jsonObject.getJSONObject("info");
+                double avr = vmiJSON.getDouble("avr");
+                double low = vmiJSON.getDouble("low");
+                double high = vmiJSON.getDouble("high");
+                int size = vmiJSON.getInt("size");
                 List<String> members = null;
 
-                if(jsonObject.has("mem")){
-                    List objectList = jsonObject.getJSONArray("mem").toList();
+                if(vmiJSON.has("mem")){
+                    List objectList = vmiJSON.getJSONArray("mem").toList();
                     members = objectList;
                 }
 

@@ -1,30 +1,36 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
 import de.freesoccerhdx.pandadb.ListType;
-import de.freesoccerhdx.pandadb.Pair;
+import de.freesoccerhdx.pandadb.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
-import de.freesoccerhdx.simplesocket.server.ClientSocket;
-import de.freesoccerhdx.simplesocket.server.ServerListener;
-import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
+import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
 
 import java.util.List;
 
-public class ListKeysListener extends ServerListener {
+public class ListKeysListener /*extends ServerListener*/ {
 
     private PandaServer pandaServer;
 
     public ListKeysListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
-        pandaServer.getSimpleSocketServer().setServerListener("listkeys", this);
+       // pandaServer.getSimpleSocketServer().setServerListener("listkeys", this);
     }
 
-
+    /*
     @Override
     public void recive(SimpleSocketServer simpleSocketServer, ClientSocket clientSocket, String channel, String message) {
-        JSONObject jsonObject = new JSONObject(message);
-        String questid = jsonObject.has("questid") ? jsonObject.getString("questid") : null;
+        JSONObject result = parseData(message);
+        if(result != null) {
+            clientSocket.sendNewMessage("listkeysfeedback", result.toString(), null);
+        }
+    }
+    */
+
+    public JSONObject parseData(PandaClientChannel channel, String data){
+        JSONObject jsonObject = new JSONObject(data);
+        String questid = jsonObject.has("q") ? jsonObject.getString("q") : null;
         int gettype = jsonObject.getInt("gettype");
         Pair<Status, List<String>> list = null;
 
@@ -33,36 +39,41 @@ public class ListKeysListener extends ServerListener {
             ListType listType = ListType.values()[listtypeID];
             list = pandaServer.getDataStorage().getListKeys(listType);
         }else if(gettype == 1) { // getListKeys
-            String key = jsonObject.getString("key");
+            String key = jsonObject.getString("k");
             int listtypeID = jsonObject.getInt("type");
             ListType listType = ListType.values()[listtypeID];
-            list = pandaServer.getDataStorage().getListKeys(key, listType);
+            list = pandaServer.getDataStorage().getListMemberKeys(key, listType);
         }else if(gettype == 2) { // getKeys
-            String key = jsonObject.getString("key");
-            list = pandaServer.getDataStorage().getKeys(key);
+            String key = jsonObject.getString("k");
+            list = pandaServer.getDataStorage().getMemberKeys(key);
         }else if(gettype == 3) { // getKeys
             list = pandaServer.getDataStorage().getKeys();
         }else if(gettype == 4) { // getValueKeys
             list = pandaServer.getDataStorage().getValueKeys();
         }else if(gettype == 5) { // getValueKeys
-            String key = jsonObject.getString("key");
+            String key = jsonObject.getString("k");
             list = pandaServer.getDataStorage().getValueKeys(key);
+        }else if(gettype == 10) {
+            String key = jsonObject.getString("k");
+            list = pandaServer.getDataStorage().getStoredSerializableMemberKeys(key);
+        }else if(gettype == 11) {
+            list = pandaServer.getDataStorage().getStoredSerializableKeys();
         }
 
-        sendListKeysFeedback(clientSocket, questid, list);
-
+        return createTotalObject(questid, list);
     }
 
-    private <T> void sendListKeysFeedback(ClientSocket clientSocket, String questid, Pair<Status,List<String>> pair){
+    private <T> JSONObject createTotalObject(String questid, Pair<Status,List<String>> pair){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             jsonObject.put("s", pair.getFirst().ordinal());
             if (pair.getSecond() != null) {
-                jsonObject.put("info", pair.getSecond());
+                jsonObject.put("i", pair.getSecond());
             }
-            clientSocket.sendNewMessage("listkeysfeedback", jsonObject.toString(), null);
+            return jsonObject;
         }
+        return null;
     }
 
 }

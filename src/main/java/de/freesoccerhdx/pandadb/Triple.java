@@ -1,6 +1,8 @@
 package de.freesoccerhdx.pandadb;
 
-public class Triple<T, T1, T2> extends Pair<T,T1>{
+import de.freesoccerhdx.simplesocket.Pair;
+
+public class Triple<T, T1, T2> extends Pair<T,T1> {
 
     private T2 third;
     public Triple(T first, T1 second, T2 third){

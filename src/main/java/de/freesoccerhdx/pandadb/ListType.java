@@ -1,12 +1,13 @@
 package de.freesoccerhdx.pandadb;
 
+import com.sun.source.tree.ClassTree;
 import org.json.JSONArray;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-public enum ListType{
+public enum ListType {
 
     STRING(String.class){
         @Override
@@ -353,7 +354,7 @@ public enum ListType{
         }
     };
 
-    private Class<?> type;
+    private Class type;
     <T> ListType(Class<T> typeclass) {
         this.type = typeclass;
     }

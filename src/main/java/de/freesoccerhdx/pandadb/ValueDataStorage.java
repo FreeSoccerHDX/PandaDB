@@ -13,7 +13,7 @@ public class ValueDataStorage extends HashMap<String, Double>{
     private double totalValue = 0.0;
     private double averageValue = 0.0;
 
-    public ValueDataStorage(){
+    public ValueDataStorage() {
 
     }
 
@@ -37,9 +37,8 @@ public class ValueDataStorage extends HashMap<String, Double>{
         if(oldvalue != null) {
             int newsize = size();
             if (newsize > 0) {
-                List<Double> sortedStream = values().stream().sorted().toList();
-                highestValue = sortedStream.get(0);
-                lowestValue = sortedStream.get(sortedStream.size() - 1);
+                //highestValue = sortedStream.get(0);
+                //lowestValue = sortedStream.get(sortedStream.size() - 1);
                 totalValue -= oldvalue;
                 averageValue = totalValue / (1.0*size());
             } else {
@@ -55,8 +54,6 @@ public class ValueDataStorage extends HashMap<String, Double>{
     @Override
     public Double put(String key, Double value) {
         Double oldvalue = super.put(key, value);
-        lowestValue = Math.min(lowestValue, value);
-        highestValue = Math.max(highestValue, value);
 
         totalValue += value;
         if(oldvalue != null){
@@ -75,6 +72,14 @@ public class ValueDataStorage extends HashMap<String, Double>{
     }
 
     public ValueMembersInfo getInfo(boolean withMembers) {
+        Stream<Double> sortedStream = values().stream();
+        lowestValue = sortedStream.min((o1, o2) -> {
+            return o1 < o2 ? 0 : 1;
+        }).get();
+        sortedStream = values().stream();
+        highestValue = sortedStream.min((o1, o2) -> {
+            return o1 > o2 ? 0 : 1;
+        }).get();
         return new ValueMembersInfo(lowestValue,highestValue,averageValue,size(),withMembers ? new ArrayList<>(keySet()) : null);
     }
 

@@ -1,5 +1,7 @@
 package de.freesoccerhdx.pandadb;
 
+import de.freesoccerhdx.simplesocket.Pair;
+
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -17,7 +19,8 @@ import java.util.TimerTask;
 public class ServerDataStorage {
 
     private HashMap<String, ValueDataStorage> valueData = new HashMap<>();
-    private HashMap<String, HashMap<String, String>> textData = new HashMap<>();
+    private TextsDataStorage textData = new TextsDataStorage(this);
+    private TextsDataStorage serializableData = new TextsDataStorage(this);
 
     private HashMap<ListType, HashMap<String, HashMap<String,List<Object>>>> listData = new HashMap<>();
 
@@ -74,6 +77,7 @@ public class ServerDataStorage {
             if(dataTreeFile.exists()){
                 dataTreeFile.delete();
             }
+            dataTreeFile.createNewFile();
             fos = new FileOutputStream(dataTreeFile);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
@@ -116,6 +120,27 @@ public class ServerDataStorage {
                     bw.newLine();
                 }
             }
+
+            bw.write("SerializableData(Size="+serializableData.size()+"):");
+            bw.newLine();
+
+            for(String key : serializableData.keySet()){
+                HashMap<String, String> keydata = serializableData.get(key);
+                bw.write("    KEY="+key + " (Size="+keydata.size()+")");
+                bw.newLine();
+                int maxlength = -1;
+                for(String member : keydata.keySet()){
+                    maxlength = Math.max(maxlength,member.length());
+                }
+                maxlength += 2;
+                for(String member : keydata.keySet()){
+                    int remainlength = maxlength-member.length();
+                    String buffer = " ".repeat(remainlength);
+                    bw.write("        MEMBER=" +member+buffer+ "Text="+keydata.get(member));
+                    bw.newLine();
+                }
+            }
+
             bw.write("ListData:");
             bw.newLine();
             for(ListType listType : ListType.values()){
@@ -203,6 +228,23 @@ public class ServerDataStorage {
                 }
             }
 
+            int seridatasize = dis.readInt();
+            for(int i = 0; i < seridatasize; i++){
+                String key = dis.readUTF();
+                HashMap<String, String> memberMap = new HashMap<>();
+
+                int membersize = dis.readInt();
+                for(int a = 0; a < membersize; a++){
+                    String member = dis.readUTF();
+                    String value = dis.readUTF();
+                    memberMap.put(member,value);
+                }
+                if(memberMap.size() > 0) {
+                    serializableData.put(key, memberMap);
+                }
+            }
+
+
             for (ListType listType : ListType.values()) {
                 int listamount = dis.readInt();
 
@@ -249,6 +291,9 @@ public class ServerDataStorage {
 
     public void saveDatabase() throws IOException {
         System.out.println("Path to database: "+databaseFile.getPath());
+        if(databaseFile.exists()){
+            databaseFile.delete();
+        }
         DataOutputStream dos = new DataOutputStream(new FileOutputStream(databaseFile));
         try {
             dos.writeInt(valueData.size()); // size of valueData
@@ -273,6 +318,16 @@ public class ServerDataStorage {
                 }
             }
 
+            dos.writeInt(serializableData.size()); // size of valueData
+            for (String key : serializableData.keySet()) {
+                dos.writeUTF(key); // write key
+                HashMap<String, String> memberData = serializableData.get(key);
+                dos.writeInt(memberData.size()); // write how many members are stored
+                for (String memberKey : memberData.keySet()) {
+                    dos.writeUTF(memberKey); // the member from the key
+                    dos.writeUTF(memberData.get(memberKey)); // the text of the member
+                }
+            }
 
             //dos.write(listData.size()); // size of listData
             for (ListType listType : ListType.values()) {
@@ -338,7 +393,7 @@ public class ServerDataStorage {
     public Pair<Status,Double> setValue(String key, String member, double value) {
 
         ValueDataStorage keymap = valueData.get(key);
-        Double newvalue = null;
+        Double newvalue = value;
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
 
         if(keymap == null){
@@ -348,6 +403,7 @@ public class ServerDataStorage {
         if(!keymap.containsKey(member)){
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
+
         keymap.put(member, value);
         haschanged = true;
 
@@ -370,6 +426,9 @@ public class ServerDataStorage {
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
         Double prevalue = keymap.get(member);
+        if(prevalue == null){
+            status = Status.SUCCESSFUL_CREATED_NEW;
+        }
         newvalue = value + ((prevalue == null) ? 0 : prevalue);
         keymap.put(member, newvalue);
 
@@ -408,22 +467,7 @@ public class ServerDataStorage {
      * @return Status(SUCCESSFUL_REMOVED_MEMBER/MEMBER_NOT_FOUND/KEY_NOT_FOUND)
      * */
     public Status remove(String key, String member) {
-        HashMap<String, String> keymap = textData.get(key);
-        if(keymap != null){
-            boolean erfolg = keymap.remove(member) != null;
-
-            if(keymap.size() == 0){
-                textData.remove(key);
-            }
-            if(erfolg){
-                haschanged = true;
-                return Status.SUCCESSFUL_REMOVED_MEMBER;
-            }
-
-            return Status.MEMBER_NOT_FOUND;
-        }
-
-        return Status.KEY_NOT_FOUND;
+       return textData.remove(key, member);
     }
 
     /**
@@ -432,22 +476,7 @@ public class ServerDataStorage {
      * @return Status(KEY_NOT_FOUND/MEMBER_NOT_FOUND/SUCCESSFUL)
      * */
     public Pair<Status,String> get(String key, String member) {
-        String text = null;
-        Status status = Status.KEY_NOT_FOUND;
-        try {
-            HashMap<String, String> keymap = textData.get(key);
-            if (keymap != null) {
-                text = keymap.get(member);
-                if(text == null){
-                    status = Status.MEMBER_NOT_FOUND;
-                }else{
-                    status = Status.SUCCESSFUL;
-                }
-            }
-        }catch (Exception exception){
-            exception.printStackTrace();
-        }
-        return Pair.of(status,text);
+        return textData.get(key, member);
     }
 
     /**
@@ -456,18 +485,7 @@ public class ServerDataStorage {
      * @return Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW)
      * */
     public Status set(String key, String member, String value) {
-        HashMap<String, String> keymap = textData.get(key);
-        Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
-        if (keymap == null) {
-            keymap = new HashMap<>();
-            textData.put(key, keymap);
-        }
-        if(!keymap.containsKey(member)){
-            status = Status.SUCCESSFUL_CREATED_NEW;
-        }
-        keymap.put(member, value);
-        haschanged = true;
-        return status;
+        return textData.set(key,member,value);
     }
 
     /**
@@ -677,15 +695,7 @@ public class ServerDataStorage {
      * @return Pair of Status(NO_KEYS_AVAILABLE/SUCCESSFUL) and the Keys
      * */
     public Pair<Status,List<String>> getKeys() {
-        Status status = Status.NO_KEYS_AVAILABLE;
-        List<String> stringList = null;
-
-        if(textData.size() > 0){
-            stringList = new ArrayList<>(textData.keySet());
-            status = Status.SUCCESSFUL;
-        }
-
-        return Pair.of(status,stringList);
+        return textData.getKeys();
     }
 
     /**
@@ -693,17 +703,8 @@ public class ServerDataStorage {
      *
      * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
-    public Pair<Status,List<String>> getKeys(String key) {
-        Status status = Status.KEY_NOT_FOUND;
-        List<String> stringList = null;
-        HashMap<String, String> textMemberKeys = textData.get(key);
-
-        if(textMemberKeys != null){
-            stringList = new ArrayList<>(textMemberKeys.keySet());
-            status = Status.SUCCESSFUL;
-        }
-
-        return Pair.of(status,stringList);
+    public Pair<Status,List<String>> getMemberKeys(String key) {
+       return textData.getMemberKeys(key);
     }
 
     /**
@@ -728,7 +729,7 @@ public class ServerDataStorage {
      *
      * @return Pair of Status(KEY_NOT_FOUND/SUCCESSFUL) and the Keys
      * */
-    public Pair<Status,List<String>> getListKeys(String key, ListType listType) {
+    public Pair<Status,List<String>> getListMemberKeys(String key, ListType listType) {
         Status status = Status.LISTTYPE_NOT_FOUND;
         List<String> stringList = null;
         HashMap<String, HashMap<String, List<Object>>> listtypeMap = listData.get(listType);
@@ -763,5 +764,34 @@ public class ServerDataStorage {
 
 
         return Pair.of(status,valueMembersInfo);
+    }
+
+    public Pair<Status, String> getStoredSerializable(String key, String member) {
+        return serializableData.get(key,member);
+    }
+
+    public Status storeSerializable(String key, String member, String value) {
+        return serializableData.set(key, member, value);
+    }
+
+    public Pair<Status, List<String>> getStoredSerializableKeys() {
+        return serializableData.getKeys();
+    }
+
+    public Pair<Status, List<String>> getStoredSerializableMemberKeys(String key) {
+        return serializableData.getMemberKeys(key);
+    }
+
+    public Pair<Status, HashMap<String,String>> getStoredSerializableMemberData(String key){
+        return serializableData.getMemberData(key);
+    }
+
+    public Pair<Status, HashMap<String,String>> getTextMemberData(String key){
+        return textData.getMemberData(key);
+    }
+
+
+    public void needSave() {
+        this.haschanged = true;
     }
 }

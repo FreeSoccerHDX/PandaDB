@@ -72,11 +72,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20211205</version>
-        </dependency>
-        <dependency>
             <groupId>de.freesoccerhdx.SimpleSocket</groupId>
             <artifactId>SimpleSocket</artifactId>
             <version>1.0-SNAPSHOT</version>
