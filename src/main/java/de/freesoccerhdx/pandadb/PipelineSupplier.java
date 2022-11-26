@@ -1,8 +1,8 @@
 package de.freesoccerhdx.pandadb;
 
-import de.freesoccerhdx.pandadb.interweb.ClientCommands;
-import de.freesoccerhdx.pandadb.interweb.DatabaseWriter;
-import de.freesoccerhdx.pandadb.interweb.PandaDataSerializer;
+import de.freesoccerhdx.pandadb.clientutils.ClientCommands;
+import de.freesoccerhdx.pandadb.clientutils.DatabaseWriter;
+import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
 
@@ -28,8 +28,9 @@ public class PipelineSupplier implements ClientCommands {
     /**
      * Sends the queued calls to the Server and waits for the answer
      *
+     * @return If the message was sended or not
      * */
-    public void sync(){
+    public boolean sync(){
         if(size() > 0) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("size", waitingCalls.size());
@@ -56,7 +57,7 @@ public class PipelineSupplier implements ClientCommands {
             waitingCalls.clear();
             currentUUID = UUID.randomUUID().toString();
 
-            pandaClient.getSimpleSocketClient().sendMessage("dbpipeline", "Server", jsonObject);
+            return pandaClient.sendMessage("dbpipeline", "Server", jsonObject);
         }else{
             throw new IllegalStateException("There are no waiting Calls for the Server left.");
         }

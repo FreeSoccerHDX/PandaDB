@@ -1,10 +1,9 @@
 package de.freesoccerhdx.pandadb;
 
-import de.freesoccerhdx.pandadb.interweb.PandaDataSerializer;
+import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class DataResult {
 
@@ -23,7 +22,7 @@ public class DataResult {
     }
 
     public interface ListStoredSerializableResult<T> extends Result {
-        void result(HashMap<String, PandaDataSerializer<T>> object, Status status);
+        void result(HashMap<String, T> object, Status status);
     }
 
     public interface StatusResult extends Result {

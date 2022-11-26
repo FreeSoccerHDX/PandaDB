@@ -9,24 +9,13 @@ import org.json.JSONObject;
 
 import java.util.List;
 
-public class ListListener /*extends ServerListener*/ {
+public class ListListener {
 
     private PandaServer pandaServer;
 
     public ListListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
-        //pandaServer.getSimpleSocketServer().setServerListener("addlist", this);
-       // pandaServer.getSimpleSocketServer().setServerListener("getlist", this);
     }
-    /*
-    @Override
-    public void recive(SimpleSocketServer simpleSocketServer, ClientSocket clientSocket, String channel, String message) {
-        JSONObject jsonObject = parseData(channel,message);
-        if(jsonObject != null) {
-            clientSocket.sendNewMessage("listfeedback", jsonObject.toString(), null);
-        }
-    }
-    */
 
     public JSONObject parseData(PandaClientChannel channel, String data){
         JSONObject jsonObject = new JSONObject(data);

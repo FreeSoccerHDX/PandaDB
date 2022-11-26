@@ -37,8 +37,6 @@ public class ValueDataStorage extends HashMap<String, Double>{
         if(oldvalue != null) {
             int newsize = size();
             if (newsize > 0) {
-                //highestValue = sortedStream.get(0);
-                //lowestValue = sortedStream.get(sortedStream.size() - 1);
                 totalValue -= oldvalue;
                 averageValue = totalValue / (1.0*size());
             } else {

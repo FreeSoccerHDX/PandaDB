@@ -19,6 +19,7 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <version>3.2.1</version>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <archive>
@@ -62,13 +63,6 @@
             </resource>
         </resources>
     </build>
-
-    <repositories>
-        <repository>
-            <id>repo</id>
-            <url>file://${project.basedir}/src/main/resources/repo</url>
-        </repository>
-    </repositories>
 
     <dependencies>
         <dependency>

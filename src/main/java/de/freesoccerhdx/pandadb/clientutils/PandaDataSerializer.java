@@ -1,4 +1,4 @@
-package de.freesoccerhdx.pandadb.interweb;
+package de.freesoccerhdx.pandadb.clientutils;
 
 public interface PandaDataSerializer<T> {
 

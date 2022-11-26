@@ -13,27 +13,7 @@ public class ValueListener {
 
     public ValueListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
-        /*
-        pandaServer.getSimpleSocketServer().setServerListener("getvalue", this);
-        pandaServer.getSimpleSocketServer().setServerListener("setvalue", this);
-        pandaServer.getSimpleSocketServer().setServerListener("addvalue", this);
-        pandaServer.getSimpleSocketServer().setServerListener("infovalues", this);
-        */
     }
-
-    /*
-    @Override
-    public void recive(SimpleSocketServer simpleSocketServer, ClientSocket clientSocket, String channel, String message) {
-        JSONObject result = this.parseData(channel, message);
-        if(result != null) {
-            if (channel.equals("infovalues")) {
-                clientSocket.sendNewMessage("valueinfofeedback", result.toString(), null);
-            } else {
-                clientSocket.sendNewMessage("valuefeedback", result.toString(), null);
-            }
-        }
-    }
-     */
 
     private JSONObject createTotalObject(String questid, Pair<Status, Double> info){
         if(questid != null) {

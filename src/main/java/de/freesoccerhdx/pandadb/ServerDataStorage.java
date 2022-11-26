@@ -294,12 +294,18 @@ public class ServerDataStorage {
         if(databaseFile.exists()){
             databaseFile.delete();
         }
+
         DataOutputStream dos = new DataOutputStream(new FileOutputStream(databaseFile));
         try {
-            dos.writeInt(valueData.size()); // size of valueData
-            for (String key : valueData.keySet()) {
+            HashMap<String, ValueDataStorage> copyvaluedata = (HashMap<String, ValueDataStorage>) valueData.clone();
+            HashMap<String, HashMap<String, String>> copytextdata = (HashMap<String, HashMap<String, String>>) textData.clone();
+            HashMap<String, HashMap<String, String>> seritextdata = (HashMap<String, HashMap<String, String>>) serializableData.clone();
+            HashMap<ListType, HashMap<String, HashMap<String,List<Object>>>> listclonedata = (HashMap<ListType, HashMap<String, HashMap<String, List<Object>>>>) listData.clone();
+
+            dos.writeInt(copyvaluedata.size()); // size of valueData
+            for (String key : copyvaluedata.keySet()) {
                 dos.writeUTF(key); // write key
-                HashMap<String, Double> memberData = valueData.get(key);
+                HashMap<String, Double> memberData = copyvaluedata.get(key);
                 dos.writeInt(memberData.size()); // write how many members are stored
                 for (String memberKey : memberData.keySet()) {
                     dos.writeUTF(memberKey); // the member from the key
@@ -307,10 +313,10 @@ public class ServerDataStorage {
                 }
             }
 
-            dos.writeInt(textData.size()); // size of valueData
-            for (String key : textData.keySet()) {
+            dos.writeInt(copytextdata.size()); // size of valueData
+            for (String key : copytextdata.keySet()) {
                 dos.writeUTF(key); // write key
-                HashMap<String, String> memberData = textData.get(key);
+                HashMap<String, String> memberData = copytextdata.get(key);
                 dos.writeInt(memberData.size()); // write how many members are stored
                 for (String memberKey : memberData.keySet()) {
                     dos.writeUTF(memberKey); // the member from the key
@@ -318,10 +324,10 @@ public class ServerDataStorage {
                 }
             }
 
-            dos.writeInt(serializableData.size()); // size of valueData
-            for (String key : serializableData.keySet()) {
+            dos.writeInt(seritextdata.size()); // size of valueData
+            for (String key : seritextdata.keySet()) {
                 dos.writeUTF(key); // write key
-                HashMap<String, String> memberData = serializableData.get(key);
+                HashMap<String, String> memberData = seritextdata.get(key);
                 dos.writeInt(memberData.size()); // write how many members are stored
                 for (String memberKey : memberData.keySet()) {
                     dos.writeUTF(memberKey); // the member from the key
@@ -331,8 +337,8 @@ public class ServerDataStorage {
 
             //dos.write(listData.size()); // size of listData
             for (ListType listType : ListType.values()) {
-                if (listData.containsKey(listType)) {
-                    HashMap<String, HashMap<String, List<Object>>> listtypeData = listData.get(listType);
+                if (listclonedata.containsKey(listType)) {
+                    HashMap<String, HashMap<String, List<Object>>> listtypeData = listclonedata.get(listType);
                     dos.writeInt(listtypeData.size());
                     for (String key : listtypeData.keySet()) {
                         HashMap<String, List<Object>> keydata = listtypeData.get(key);

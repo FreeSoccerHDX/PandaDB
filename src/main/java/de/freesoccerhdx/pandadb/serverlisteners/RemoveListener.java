@@ -6,23 +6,13 @@ import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import org.json.JSONObject;
 
-public class RemoveListener /*extends ServerListener*/ {
+public class RemoveListener {
 
     private PandaServer pandaServer;
 
     public RemoveListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
-     //   pandaServer.getSimpleSocketServer().setServerListener("remove", this);
     }
-    /*
-    @Override
-    public void recive(SimpleSocketServer simpleSocketServer, ClientSocket clientSocket, String channel, String message) {
-        JSONObject jsonObject = parseData(message);
-        if(jsonObject != null) {
-            clientSocket.sendNewMessage("removefeedback", jsonObject.toString(), null);
-        }
-    }
-    */
 
     public JSONObject parseData(PandaClientChannel channel, String data){
         JSONObject jsonObject = new JSONObject(data);

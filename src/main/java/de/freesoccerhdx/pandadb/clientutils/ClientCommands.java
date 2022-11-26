@@ -1,4 +1,4 @@
-package de.freesoccerhdx.pandadb.interweb;
+package de.freesoccerhdx.pandadb.clientutils;
 
 import de.freesoccerhdx.pandadb.DataResult;
 import de.freesoccerhdx.pandadb.ListType;

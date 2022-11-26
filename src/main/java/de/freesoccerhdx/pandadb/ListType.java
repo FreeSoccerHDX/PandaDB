@@ -186,7 +186,11 @@ public enum ListType {
     BYTE(Byte.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            dos.writeByte((Byte) obj);
+            if(obj instanceof Integer integer){
+                dos.writeByte(integer.byteValue());
+            }else {
+                dos.writeByte((Byte) obj);
+            }
         }
 
         @Override
@@ -206,7 +210,7 @@ public enum ListType {
                 JSONArray jsonArray = (JSONArray) obj;
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
-                    dos.writeByte((Byte) listobj);
+                    BYTE.write(dos, listobj);
                 }
             }else {
                 Byte[] array = (Byte[]) obj;
@@ -243,7 +247,11 @@ public enum ListType {
     DOUBLE(Double.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            dos.writeDouble((Double) obj);
+            if(obj instanceof Number number){
+                dos.writeDouble(number.doubleValue());
+            }else {
+                dos.writeDouble((Double) obj);
+            }
         }
 
         @Override
@@ -263,7 +271,7 @@ public enum ListType {
                 JSONArray jsonArray = (JSONArray) obj;
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
-                    dos.writeDouble((Double) listobj);
+                    DOUBLE.write(dos, listobj);
                 }
             }else {
                 Double[] array = (Double[]) obj;
@@ -300,7 +308,11 @@ public enum ListType {
     LONG(Long.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            dos.writeLong((Long) obj);
+            if(obj instanceof Number number){
+                dos.writeLong(number.longValue());
+            }else {
+                dos.writeLong((Long) obj);
+            }
         }
 
         @Override
@@ -320,7 +332,7 @@ public enum ListType {
                 JSONArray jsonArray = (JSONArray) obj;
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
-                    dos.writeLong((Long) listobj);
+                    LONG.write(dos, listobj);
                 }
             }else {
                 Long[] array = (Long[]) obj;
