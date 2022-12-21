@@ -417,6 +417,63 @@ public class PipelineSupplier implements ClientCommands {
     }
 
 
+
+
+
+
+    public void setSimple(String key, String value, DataResult.TextResult textResult) {
+        if(notnull(key, value)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, textResult);
+            jsonObject.put("v", value);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SIMPLE_SET, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or value is null");
+        }
+    }
+
+    public void getSimple(String key, DataResult.TextResult textResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, textResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SIMPLE_GET, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    public void removeSimple(String key, DataResult.TextResult textResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, textResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SIMPLE_REMOVE, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or value is null");
+        }
+    }
+
+    public void getSimpleKeys(DataResult.KeysResult keysResult) {
+        if(notnull(keysResult)) {
+            JSONObject jsonObject = prepareValuePacket(null, null, keysResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SIMPLE_GET_KEYS, jsonObject));
+        }else{
+            throw new IllegalArgumentException("KeysResult or value is null");
+        }
+    }
+
+    public void getSimpleData(DataResult.MemberDataResult memberDataResult) {
+        if(notnull(memberDataResult)) {
+            JSONObject jsonObject = prepareValuePacket(null, null, memberDataResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SIMPLE_GET_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("KeysResult or value is null");
+        }
+    }
+
+
+
+
+
+
+
+
     private boolean notnull(Object... objects){
 
         for(Object obj : objects){

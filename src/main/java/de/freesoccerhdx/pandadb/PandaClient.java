@@ -451,5 +451,33 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
         this.mainPipelineSupplier.sync();
     }
 
+    @Override
+    public void setSimple(String key, String value, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.setSimple(key, value, textResult);
+        this.mainPipelineSupplier.sync();
+    }
+    @Override
+    public void getSimple(String key, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.getSimple(key, textResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeSimple(String key, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.removeSimple(key, textResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getSimpleKeys(DataResult.KeysResult keysResult) {
+        this.mainPipelineSupplier.getSimpleKeys(keysResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getSimpleData(DataResult.MemberDataResult memberDataResult) {
+        this.mainPipelineSupplier.getSimpleData(memberDataResult);
+        this.mainPipelineSupplier.sync();
+    }
 
 }

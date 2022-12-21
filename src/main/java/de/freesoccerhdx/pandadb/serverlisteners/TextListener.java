@@ -69,7 +69,6 @@ public class TextListener {
                     }else {
                         jsonObject.put("i", pair.getSecond());
                     }
-                    //System.err.println("########### " + info.getClass().getName() + " -> " + pair.getSecond().getClass().getName());
                 }
             }
             return jsonObject;

@@ -38,6 +38,13 @@ public enum PandaClientChannel {
     LISTDATA_GET_LISTINDEX, // -> return Object of specific ListType, Key and Index
     LISTDATA_GET_LISTSIZE, // -> return size of specific ListType and Key
 
+
+    SIMPLE_SET,
+    SIMPLE_GET,
+    SIMPLE_REMOVE,
+    SIMPLE_GET_KEYS,
+    SIMPLE_GET_DATA,
+
     ;
 
     public boolean isText(){
@@ -56,6 +63,9 @@ public enum PandaClientChannel {
         return this.name().startsWith("LISTDATA_");
     }
 
+    public boolean isSimple(){
+        return this.name().startsWith("SIMPLE_");
+    }
 
 
 /*

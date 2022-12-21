@@ -2,6 +2,7 @@ package de.freesoccerhdx.pandadb;
 
 import de.freesoccerhdx.pandadb.serverlisteners.ListTypeDataStorage;
 import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverlisteners.SimpleDataStorage;
 import de.freesoccerhdx.pandadb.serverlisteners.TextsDataStorage;
 import de.freesoccerhdx.pandadb.serverlisteners.ValueDataStorage;
 
@@ -24,6 +25,7 @@ public class ServerDataStorage {
     private final ValueDataStorage valueData = new ValueDataStorage(this);
     private final TextsDataStorage textData = new TextsDataStorage(this);
     private final TextsDataStorage serializableData = new TextsDataStorage(this);
+    private final SimpleDataStorage simpleData = new SimpleDataStorage();
 
     private final ListTypeDataStorage listData = new ListTypeDataStorage(this);
 
@@ -261,8 +263,15 @@ public class ServerDataStorage {
                     }
 
                 }
-
             }
+
+            int simpleSize = dis.readInt();
+            for(int i = 0; i < simpleSize; i++){
+                String key = dis.readUTF();
+                String value = dis.readUTF();
+                simpleData.put(key,value);
+            }
+
 
         }
     }
@@ -330,6 +339,13 @@ public class ServerDataStorage {
                     dos.writeInt(0);
                 }
             }
+
+            dos.writeInt(simpleData.size());
+            for(String key : simpleData.keySet()){
+                dos.writeUTF(key);
+                dos.writeUTF(simpleData.get(key));
+            }
+
         }
 
 
@@ -357,4 +373,7 @@ public class ServerDataStorage {
         this.haschanged = true;
     }
 
+    public SimpleDataStorage getSimpleData() {
+        return simpleData;
+    }
 }

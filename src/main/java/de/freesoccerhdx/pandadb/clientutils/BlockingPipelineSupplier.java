@@ -520,4 +520,83 @@ public class BlockingPipelineSupplier {
     }
 
 
+
+
+    public Pair<Status,String> setSimple(String key, String value, long maxMillis) {
+        int id = getID();
+        DataResult.TextResult textResult = new DataResult.TextResult() {
+            @Override
+            public void result(String data, Status status) {
+                results.put(id, Pair.of(status,data));
+            }
+        };
+        pipelineSupplier.setSimple(key, value, textResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, String>) result;
+    }
+
+    public Pair<Status,String> getSimple(String key, long maxMillis) {
+        int id = getID();
+        DataResult.TextResult textResult = new DataResult.TextResult() {
+            @Override
+            public void result(String data, Status status) {
+                results.put(id, Pair.of(status,data));
+            }
+        };
+        pipelineSupplier.getSimple(key, textResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, String>) result;
+    }
+
+    public Pair<Status,String> removeSimple(String key, long maxMillis) {
+        int id = getID();
+        DataResult.TextResult textResult = new DataResult.TextResult() {
+            @Override
+            public void result(String data, Status status) {
+                results.put(id, Pair.of(status,data));
+            }
+        };
+        pipelineSupplier.removeSimple(key, textResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, String>) result;
+    }
+
+    public Pair<Status,ArrayList<String>> getSimpleKeys(long maxMillis) {
+        int id = getID();
+        DataResult.KeysResult keysResult = new DataResult.KeysResult() {
+            @Override
+            public void resultList(ArrayList<String> data, Status status) {
+                results.put(id, Pair.of(status,data));
+            }
+        };
+        pipelineSupplier.getSimpleKeys(keysResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, ArrayList<String>>) result;
+    }
+
+    public Pair<Status,HashMap<String,String>> getSimpleData(long maxMillis) {
+        int id = getID();
+        DataResult.MemberDataResult memberDataResult = new DataResult.MemberDataResult() {
+            @Override
+            public void resultData(HashMap<String, String> memberData, Status status) {
+                results.put(id, Pair.of(status,memberData));
+            }
+        };
+        pipelineSupplier.getSimpleData(memberDataResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, HashMap<String, String>>) result;
+    }
+
+
+
+
+
+
+
+
 }

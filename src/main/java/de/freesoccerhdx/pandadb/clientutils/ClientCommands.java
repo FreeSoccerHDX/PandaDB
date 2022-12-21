@@ -51,4 +51,10 @@ public interface ClientCommands {
 
 
 
+    void setSimple(String key, String value, DataResult.TextResult textResult);
+    void getSimple(String key, DataResult.TextResult textResult);
+    void removeSimple(String key, DataResult.TextResult textResult);
+    void getSimpleKeys(DataResult.KeysResult keysResult);
+    void getSimpleData(DataResult.MemberDataResult memberDataResult);
+
 }

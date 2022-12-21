@@ -7,6 +7,7 @@ import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 import de.freesoccerhdx.pandadb.serverlisteners.ListListener;
 import de.freesoccerhdx.pandadb.serverlisteners.SerializableListener;
+import de.freesoccerhdx.pandadb.serverlisteners.SimpleListener;
 import de.freesoccerhdx.pandadb.serverlisteners.TextListener;
 import de.freesoccerhdx.pandadb.serverlisteners.ValueListener;
 import de.freesoccerhdx.simplesocket.server.ServerClientSocket;
@@ -29,6 +30,7 @@ public class PandaServer {
     private final TextListener textListener;
     private final ValueListener valueListener;
     private final SerializableListener serializableListener;
+    private final SimpleListener simpleListener;
 
     private final int port;
 
@@ -37,10 +39,12 @@ public class PandaServer {
         this.port = port;
         simpleSocketServer = new SimpleSocketServer(port);
 
+
         this.listListener = new ListListener(this);
         this.textListener = new TextListener(this);
         this.valueListener = new ValueListener(this);
         this.serializableListener = new SerializableListener(this);
+        this.simpleListener = new SimpleListener(this);
 
         simpleSocketServer.setServerListener("datatree", new ServerListener() {
             @Override
@@ -76,6 +80,8 @@ public class PandaServer {
                             resultData = serializableListener.parseData(channel, data);
                         }else if(channel.isListData()) {
                             resultData = listListener.parseData(channel, data);
+                        }else if(channel.isSimple()) {
+                            resultData = simpleListener.parseData(channel, data);
                         }else {
                             System.out.println("[PandaServer] Pipeline-Channel not found! Name="+channel + " (Data="+data+")");
                         }
@@ -158,6 +164,35 @@ public class PandaServer {
                     getDataStorage().generateDataTree();
                     System.out.println("Data-Tree created");
 
+                } else if(name.equalsIgnoreCase("test:simple")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn){
+
+                            PipelineSupplier pipe = client.createPipelineSupplier();
+
+                            pipe.setSimple("key", "value", (old,status) -> {
+                                System.out.println("SetSimple: "+status+" (old="+old+")");
+                            });
+                            pipe.getSimple("key", (value,status) -> {
+                                System.out.println("GetSimple: "+status+" (value="+value+")");
+                            });
+                            pipe.getSimpleKeys((keys,status) -> {
+                                System.out.println("GetSimpleKeys: "+status+" (keys="+keys+")");
+                            });
+                            pipe.getSimpleData((data,status) -> {
+                                System.out.println("GetSimpleData: "+status+" (data="+data+")");
+                            });
+                            pipe.removeSimple("key", (old,status) -> {
+                                System.out.println("RemoveSimple: "+status+" (old="+old+")");
+                            });
+
+                            pipe.sync();
+
+                        }
+                    });
+
+                    killTestClient(client);
                 } else if(name.equalsIgnoreCase("test:listkeys")) {
                     PandaClient client = new PandaClient("database_test_min","localhost",port);
                     client.setOnLogin(loggedIn -> {
