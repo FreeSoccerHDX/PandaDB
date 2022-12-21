@@ -8,6 +8,10 @@ public enum Status {
     SUCCESSFUL_REMOVED_MEMBER,
     SUCCESSFUL_OVERWRITE_OLD,
     SUCCESSFUL_ADD_ENTRY,
+    SUCCESSFUL_REMOVED_LISTTYPE,
+    SUCCESSFUL_GET_LISTINDEX,
+
+
     KEY_NOT_FOUND,
     LISTTYPE_NOT_FOUND,
     LISTKEY_NOT_FOUND,
@@ -24,6 +28,8 @@ public enum Status {
                 || this == SUCCESSFUL_REMOVED_MEMBER
                 || this == SUCCESSFUL_CREATED_NEW
                 || this == SUCCESSFUL_OVERWRITE_OLD
+                || this == SUCCESSFUL_REMOVED_LISTTYPE
+                || this == SUCCESSFUL_GET_LISTINDEX
                 || this == SUCCESSFUL_REMOVED_KEY;
 
     }

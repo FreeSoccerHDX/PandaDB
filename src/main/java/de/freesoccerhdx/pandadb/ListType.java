@@ -1,15 +1,20 @@
 package de.freesoccerhdx.pandadb;
 
-import com.sun.source.tree.ClassTree;
 import org.json.JSONArray;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
-public enum ListType {
+public abstract class ListType<T> {
 
-    STRING(String.class){
+    public static final ArrayList<ListType> VALUES = new ArrayList<>();
+    public static ListType[] values(){
+        return VALUES.toArray(new ListType[VALUES.size()]);
+    }
+
+    public static final ListType STRING = new ListType(String.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeUTF((String) obj);
@@ -24,8 +29,9 @@ public enum ListType {
         public String parse(String obj) {
             return obj;
         }
-    },
-    STRING_ARRAY(String[].class){
+    };
+
+    public static final ListType STRING_ARRAY = new ListType(String[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -61,8 +67,9 @@ public enum ListType {
 
             return null;
         }
-    },
-    BOOLEAN(Boolean.class){
+    };
+
+    public static final ListType BOOLEAN = new ListType(Boolean.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeBoolean((Boolean) obj);
@@ -83,8 +90,9 @@ public enum ListType {
 
             return Boolean.valueOf(obj);
         }
-    },
-    BOOLEAN_ARRAY(Boolean[].class){
+    };
+
+    public static final ListType BOOLEAN_ARRAY = new ListType(Boolean[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -117,15 +125,16 @@ public enum ListType {
                 String[] dat = obj.substring(1, obj.length() - 1).split(",");
                 Boolean[] data = new Boolean[dat.length];
                 for(int i = 0; i < dat.length; i++){
-                    data[i] = ListType.BOOLEAN.parse(dat[i]);
+                    data[i] = (Boolean) ListType.BOOLEAN.parse(dat[i]);
                 }
                 return data;
             }
 
             return null;
         }
-    },
-    INTEGER(Integer.class){
+    };
+
+    public static final ListType INTEGER = new ListType(Integer.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeInt((Integer) obj);
@@ -140,8 +149,9 @@ public enum ListType {
         public Integer parse(String obj) {
             return Integer.parseInt(obj);
         }
-    },
-    INTEGER_ARRAY(Integer[].class){
+    };
+
+    public static final ListType INTEGER_ARRAY = new ListType(Integer[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -175,15 +185,16 @@ public enum ListType {
                 String[] dat = obj.substring(1, obj.length() - 1).split(",");
                 Integer[] data = new Integer[dat.length];
                 for(int i = 0; i < dat.length; i++){
-                    data[i] = ListType.INTEGER.parse(dat[i]);
+                    data[i] = (Integer) ListType.INTEGER.parse(dat[i]);
                 }
                 return data;
             }
 
             return null;
         }
-    },
-    BYTE(Byte.class){
+    };
+
+    public static final ListType BYTE = new ListType(Byte.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Integer integer){
@@ -202,8 +213,9 @@ public enum ListType {
         public Byte parse(String obj) {
             return Byte.parseByte(obj);
         }
-    },
-    BYTE_ARRAY(Byte[].class){
+    };
+
+    public static final ListType BYTE_ARRAY = new ListType(Byte[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -236,15 +248,15 @@ public enum ListType {
                 String[] dat = obj.substring(1, obj.length() - 1).split(",");
                 Byte[] data = new Byte[dat.length];
                 for(int i = 0; i < dat.length; i++){
-                    data[i] = ListType.BYTE.parse(dat[i]);
+                    data[i] = (Byte) ListType.BYTE.parse(dat[i]);
                 }
                 return data;
             }
 
             return null;
         }
-    },
-    DOUBLE(Double.class){
+    };
+    public static final ListType DOUBLE = new ListType(Double.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Number number){
@@ -263,8 +275,9 @@ public enum ListType {
         public Double parse(String obj) {
             return Double.parseDouble(obj);
         }
-    },
-    DOUBLE_ARRAY(Double[].class){
+    };
+
+    public static final ListType DOUBLE_ARRAY = new ListType(Double[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -297,15 +310,16 @@ public enum ListType {
                 String[] dat = obj.substring(1, obj.length() - 1).split(",");
                 Double[] data = new Double[dat.length];
                 for(int i = 0; i < dat.length; i++){
-                    data[i] = ListType.DOUBLE.parse(dat[i]);
+                    data[i] = (Double) ListType.DOUBLE.parse(dat[i]);
                 }
                 return data;
             }
 
             return null;
         }
-    },
-    LONG(Long.class){
+    };
+
+    public static final ListType LONG = new ListType(Long.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Number number){
@@ -324,8 +338,9 @@ public enum ListType {
         public Long parse(String obj) {
             return  Long.parseLong(obj);
         }
-    },
-    LONG_ARRAY(Long[].class){
+    };
+
+    public static final ListType LONG_ARRAY = new ListType(Long[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray){
@@ -357,7 +372,7 @@ public enum ListType {
                 String[] dat = obj.substring(1, obj.length() - 1).split(",");
                 Long[] data = new Long[dat.length];
                 for(int i = 0; i < dat.length; i++){
-                    data[i] = ListType.LONG.parse(dat[i]);
+                    data[i] = (Long) ListType.LONG.parse(dat[i]);
                 }
                 return data;
             }
@@ -366,9 +381,18 @@ public enum ListType {
         }
     };
 
+
+
     private Class type;
-    <T> ListType(Class<T> typeclass) {
+    private int ordinal;
+    private <T> ListType(Class<T> typeclass) {
         this.type = typeclass;
+        VALUES.add(this);
+        ordinal = VALUES.size() - 1;
+    }
+
+    public int ordinal(){
+        return ordinal;
     }
 
     public <T> boolean check(T tocheck){
@@ -377,6 +401,18 @@ public enum ListType {
     public abstract <T> T parse(String obj);
     public abstract void write(DataOutputStream dos, Object obj) throws IOException;
     public abstract Object read(DataInputStream dis) throws IOException;
+
+    public String name(){
+        return type.getSimpleName().toUpperCase();
+    }
+
+    @Override
+    public String toString() {
+        return "ListType{" +
+                "type=" + type.getSimpleName() +
+                ", ordinal=" + ordinal +
+                '}';
+    }
 
     public String asString(Object obj) {
         String result = "";

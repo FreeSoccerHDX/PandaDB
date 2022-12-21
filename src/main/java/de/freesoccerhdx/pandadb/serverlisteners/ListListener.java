@@ -1,7 +1,7 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
 import de.freesoccerhdx.pandadb.ListType;
-import de.freesoccerhdx.pandadb.PandaClientChannel;
+import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.Pair;
@@ -17,14 +17,47 @@ public class ListListener {
         this.pandaServer = pandaServer;
     }
 
-    public JSONObject parseData(PandaClientChannel channel, String data){
-        JSONObject jsonObject = new JSONObject(data);
+    public JSONObject parseData(PandaClientChannel channel, JSONObject jsonObject){
         String questid = jsonObject.has("q") ? jsonObject.getString("q") : null;
-        String key = jsonObject.getString("k");
-        String listkey = jsonObject.getString("listkey");
-        int id = jsonObject.getInt("type");
-        ListType listType = ListType.values()[id];
+        String key = jsonObject.has("k") ? jsonObject.getString("k") : null;
+        Integer id = jsonObject.has("t") ? jsonObject.getInt("t") : null;
+        ListType listType = id != null ? ListType.values()[id] : null;
 
+        ListTypeDataStorage storage = pandaServer.getDataStorage().getListData();
+
+        if(channel == PandaClientChannel.LISTDATA_ADD_LIST_ENTRY) {
+            Status info = storage.addListEntry(key, listType, jsonObject.get("v"));
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_REMOVE_LISTTYPE) {
+            Status info = storage.removeListType(listType);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_REMOVE_LISTKEY) {
+            Status info = storage.removeListKey(listType, key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_REMOVE_INDEX) {
+            Pair<Status, Object> info = storage.removeListIndex(listType, key, jsonObject.getInt("in"));
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_GET_LISTTYPE_KEYS) {
+            Pair<Status, List<String>> info = storage.getListKeys(listType);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_GET_LISTTYPES) {
+            Pair<Status, List<Integer>> info = storage.getListTypes();
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_GET_LISTKEY_DATA) {
+            Pair<Status, List<Object>> info = storage.getList(listType, key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_GET_LISTINDEX) {
+            Pair<Status, Object> info = storage.getListIndex(listType, key, jsonObject.getInt("in"));
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.LISTDATA_GET_LISTSIZE) {
+            Pair<Status, Integer> info = storage.getListSize(listType, key);
+            return createTotalObject(questid, info);
+        }else {
+            System.out.println("[PandaServer] Unknown Channel for ListListener: " + channel + " data="+jsonObject);
+        }
+
+
+        /*
         if(channel == PandaClientChannel.GETLIST) {
             Pair<Status, List<Object>> pair = pandaServer.getDataStorage().getList(key, listkey, listType);
             return createTotalObject(questid, pair);
@@ -33,6 +66,7 @@ public class ListListener {
             Status status = pandaServer.getDataStorage().addListEntry(key, listkey, listType, value);
             return createTotalObject(questid, status);
         }
+         */
 
         return null;
     }
@@ -42,13 +76,13 @@ public class ListListener {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             if (info != null) {
-                if(info instanceof Status){
-                    jsonObject.put("s", ((Status) info).ordinal());
-                }else{
-                    Pair<Status, List<Object>> pair = (Pair<Status, List<Object>>) info;
-                    jsonObject.put("s", pair.getFirst().ordinal());
-                    if(pair.getSecond() != null) {
-                        jsonObject.put("i", pair.getSecond());
+                if(info instanceof Status s){
+                    jsonObject.put("s", s.ordinal());
+                }else if(info instanceof Pair p){
+                    //Pair<Status, List<Object>> pair = (Pair<Status, List<Object>>) info;
+                    jsonObject.put("s", ((Status)p.getFirst()).ordinal());
+                    if(p.getSecond() != null) {
+                        jsonObject.put("i", p.getSecond());
                     }
                 }
 

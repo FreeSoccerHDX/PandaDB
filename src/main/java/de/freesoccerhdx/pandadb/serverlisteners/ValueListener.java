@@ -1,11 +1,13 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
-import de.freesoccerhdx.pandadb.PandaClientChannel;
+import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
-import de.freesoccerhdx.pandadb.ValueDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.List;
 
 public class ValueListener {
 
@@ -15,34 +17,39 @@ public class ValueListener {
         this.pandaServer = pandaServer;
     }
 
-    private JSONObject createTotalObject(String questid, Pair<Status, Double> info){
+    private JSONObject createTotalObject(String questid, Pair info){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
-            jsonObject.put("s", info.getFirst().ordinal());
-            Double value = info.getSecond();
+            jsonObject.put("s", ((Status)info.getFirst()).ordinal());
+            Object value = info.getSecond();
+            //System.err.println("Error: " + (value == null ? null : value.getClass().getSimpleName()));
             if (value != null) {
-                jsonObject.put("i", value);
+                if(value instanceof MemberValueDataStorage) {
+                    jsonObject.put("i", ((HashMap<String,Double>) value));
+                }else {
+                    jsonObject.put("i", value);
+                }
             }
             return jsonObject;
         }
         return null;
     }
 
-    private JSONObject createTotalInfoObject(String questid, Pair<Status, ValueDataStorage.ValueMembersInfo> info){
+    private JSONObject createTotalInfoObject(String questid, Pair<Status, MemberValueDataStorage.ValueMembersInfo> info){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             jsonObject.put("s", info.getFirst().ordinal());
-            ValueDataStorage.ValueMembersInfo vmi = info.getSecond();
+            MemberValueDataStorage.ValueMembersInfo vmi = info.getSecond();
             if(vmi != null){
                 JSONObject vmiJSON = new JSONObject();
-                vmiJSON.put("avr", vmi.getAverageValue());
-                vmiJSON.put("low", vmi.getLowestValue());
-                vmiJSON.put("high", vmi.getHighestValue());
-                vmiJSON.put("size", vmi.getSize());
-                if(vmi.getMembers() != null) {
-                    vmiJSON.put("mem", vmi.getMembers());
+                vmiJSON.put("avr", vmi.averageValue());
+                vmiJSON.put("low", vmi.lowestValue());
+                vmiJSON.put("high", vmi.highestValue());
+                vmiJSON.put("size", vmi.size());
+                if(vmi.members() != null) {
+                    vmiJSON.put("mem", vmi.members());
                 }
                 jsonObject.put("i", vmiJSON);
             }
@@ -52,28 +59,62 @@ public class ValueListener {
         return null;
     }
 
-    public JSONObject parseData(PandaClientChannel channel, String data) {
-
-        JSONObject jsonObject = new JSONObject(data);
+    public JSONObject parseData(PandaClientChannel channel, JSONObject jsonObject) {
         String questid = jsonObject.has("q") ? jsonObject.getString("q") : null;
-        String key = jsonObject.getString("k");
+        String key = jsonObject.has("k") ? jsonObject.getString("k") : null;
         String member = jsonObject.has("m") ? jsonObject.getString("m") : null;
 
+        ValueDataStorage vds = pandaServer.getDataStorage().getValueData();
+        if(channel == PandaClientChannel.VALUE_SET) {
+            double value = jsonObject.getDouble("v");
+            Pair<Status, Double> info = vds.setValue(key, member, value);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_ADD) {
+            double value = jsonObject.getDouble("v");
+            Pair<Status, Double> info = vds.addValue(key, member, value);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_GET_KEYS) {
+            Pair<Status, List<String>> info = vds.getKeys();
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_GET_MEMBER_KEYS) {
+            Pair<Status, List<String>> info = vds.getMemberKeys(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_GET_MEMBER_DATA) {
+            Pair<Status, Double> info = vds.getMemberData(key, member);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_GET_KEY_DATA) {
+            //System.err.println("ValueListener: VALUE_GET_KEY_DATA");
+            Pair<Status, HashMap<String, Double>> info = vds.getKeyData(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_REMOVE_KEY) {
+            Status info = vds.removeKey(key);
+            return createTotalObject(questid, Pair.of(info, null));
+        }else if(channel == PandaClientChannel.VALUE_REMOVE_MEMBER) {
+            Pair<Status, Double> info = vds.removeMember(key, member);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.VALUE_GET_VALUE_INFO) {
+            Pair<Status, MemberValueDataStorage.ValueMembersInfo> info = vds.getValuesInfo(key, jsonObject.has("km"));
+            return createTotalInfoObject(questid, info);
+        }else {
+            System.out.println("[PandaServer] Unknown Channel for ValueListener: " + channel + " data="+jsonObject);
+        }
+        /*
         if(channel == PandaClientChannel.GETVALUE) {
-            Pair<Status, Double> value = pandaServer.getDataStorage().getValue(key, member);
+            Pair<Status, Double> value = pandaServer.getDataStorage().getValueData().getValue(key, member);
             return createTotalObject(questid, value);
         }else if(channel == PandaClientChannel.SETVALUE) {
             Double value = jsonObject.getDouble("value");
-            Pair<Status, Double> erfolg = pandaServer.getDataStorage().setValue(key, member, value);
+            Pair<Status, Double> erfolg = pandaServer.getDataStorage().getValueData().setValue(key, member, value);
             return createTotalObject(questid, erfolg);
         }else if(channel == PandaClientChannel.ADDVALUE){
             Double value = jsonObject.getDouble("value");
-            Pair<Status, Double> erfolg = pandaServer.getDataStorage().addValue(key, member, value);
+            Pair<Status, Double> erfolg = pandaServer.getDataStorage().getValueData().addValue(key, member, value);
             return createTotalObject(questid, erfolg);
         }else if(channel == PandaClientChannel.INFOVALUES){
-            Pair<Status, ValueDataStorage.ValueMembersInfo> pair = pandaServer.getDataStorage().getValuesInfo(key, jsonObject.has("km"));
+            Pair<Status, MemberValueDataStorage.ValueMembersInfo> pair = pandaServer.getDataStorage().getValuesInfo(key, jsonObject.has("km"));
            return createTotalInfoObject(questid,pair);
         }
+         */
 
         return null;
     }

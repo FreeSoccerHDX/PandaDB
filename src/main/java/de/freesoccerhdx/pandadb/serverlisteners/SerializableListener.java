@@ -1,10 +1,13 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
-import de.freesoccerhdx.pandadb.PandaClientChannel;
+import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.List;
 
 public class SerializableListener {
 
@@ -14,12 +17,41 @@ public class SerializableListener {
         this.pandaServer = pandaServer;
     }
 
-    public JSONObject parseData(PandaClientChannel channel, String data) {
-        JSONObject jsonObject = new JSONObject(data);
+    public JSONObject parseData(PandaClientChannel channel, JSONObject jsonObject) {
         String questid = jsonObject.has("q") ? jsonObject.getString("q") : null;
-        String key = jsonObject.getString("k");
-        String member = jsonObject.getString("m");
+        String key = jsonObject.has("k") ? jsonObject.getString("k") : null;
+        String member = jsonObject.has("m") ? jsonObject.getString("m") : null;
 
+
+        TextsDataStorage sds = pandaServer.getDataStorage().getSerializableData();
+
+        if(channel == PandaClientChannel.SERIALIZABLE_SET) {
+            String value = jsonObject.getString("v");
+            Status status = sds.set(key, member, value);
+            return createTotalObject(questid, status);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_GET_KEYS){
+            Pair<Status, List<String>> info = sds.getKeys();
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_GET_MEMBER_KEYS){
+            Pair<Status, List<String>> info = sds.getMemberKeys(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_GET_MEMBER_DATA){
+            Pair<Status, String> info = sds.getMemberData(key, member);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_GET_KEY_DATA){
+            Pair<Status, HashMap<String, String>> info = sds.getKeyData(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_REMOVE_KEY){
+            Status info = sds.removeKey(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.SERIALIZABLE_REMOVE_MEMBER){
+            Pair<Status, String> info = sds.removeMember(key, member);
+            return createTotalObject(questid, info.getFirst());
+        }else {
+            System.out.println("[PandaServer] Unknown Channel for TextListener: " + channel + " data="+jsonObject);
+        }
+
+        /*
         if(channel == PandaClientChannel.GET_STORED_SERIALIZABLE) {
             Pair<Status, String> value = pandaServer.getDataStorage().getStoredSerializable(key, member);
             return createTotalObject(questid, value);
@@ -28,19 +60,22 @@ public class SerializableListener {
             String value = jsonObject.getString("pds");
             Status erfolg = pandaServer.getDataStorage().storeSerializable(key, member, value);
             return createTotalObject(questid, Pair.of(erfolg,null));
-        }
+        }*/
 
         return null;
     }
 
-    private JSONObject createTotalObject(String questid, Pair<Status, String> info){
+    private JSONObject createTotalObject(String questid, Object info){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
-            jsonObject.put("s", info.getFirst().ordinal());
-            String jsonString = info.getSecond();
-            if (jsonString != null) {
-                jsonObject.put("i", jsonString);
+            if (info != null) {
+                if(info instanceof Status s) {
+                    jsonObject.put("s", s.ordinal());
+                }else if(info instanceof Pair pair) {
+                    jsonObject.put("s", ((Status)pair.getFirst()).ordinal());
+                    jsonObject.put("i", pair.getSecond());
+                }
             }
             return jsonObject;
         }

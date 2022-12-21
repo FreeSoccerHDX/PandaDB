@@ -1,19 +1,22 @@
 package de.freesoccerhdx.pandadb;
 
+import de.freesoccerhdx.pandadb.clientutils.BlockingPipelineSupplier;
 import de.freesoccerhdx.pandadb.clientutils.ClientCommands;
 import de.freesoccerhdx.pandadb.clientutils.DatabaseReader;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
+import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
 import de.freesoccerhdx.simplesocket.client.ClientListener;
 import de.freesoccerhdx.simplesocket.client.SimpleSocketClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PandaClient extends SimpleSocketClient implements ClientCommands{
+public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
     protected HashMap<DataResult.Result, Object> extraListenerInfo = new HashMap<>();
@@ -29,68 +32,35 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
         setSocketListener("dbpiperesult", new ClientListener() {
             @Override
             public void recive(SimpleSocketClient simpleSocketClient, String channel, String source, String message) {
-                //System.err.println(message);
-                JSONObject jsonObject = new JSONObject(message);
-                int size = jsonObject.getInt("size");
-                String uuid = jsonObject.getString("uuid");
+                //System.err.println("Pandaclient got msg: " + message);
+                try {
+                    JSONObject jsonObject = new JSONObject(message);
+                    int size = jsonObject.getInt("size");
+                    String uuid = jsonObject.getString("uuid");
 
-                for(int i = 0; i < size; i++){
-                    if(jsonObject.has("r"+i)){
-                        JSONObject resultData = jsonObject.getJSONObject("r"+i);
-                        String id = resultData.getString("id");
-                        int statusID = resultData.getInt("s");
-                        Object info = resultData.has("i") ? resultData.get("i") : null;
-                        handleResult(uuid+id,Status.values()[statusID],info);
-                        //System.out.println("ResultData=" + resultData);
+                    for (int i = 0; i < size; i++) {
+                        if (jsonObject.has("r" + i)) {
+                            JSONObject resultData = jsonObject.getJSONObject("r" + i);
+                            String id = resultData.getString("id");
+                            int statusID = resultData.getInt("s");
+                            Object info = resultData.has("i") ? resultData.get("i") : null;
+                            handleResult(uuid + id, Status.values()[statusID], info);
+                            //System.out.println("ResultData=" + resultData);
+                        }
                     }
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
             }
         });
-
-        setSocketListener("testping", new ClientListener() {
-            @Override
-            public void recive(SimpleSocketClient simpleSocketClient, String channel, String source, String message) {
-                testping = message;
-            }
-        });
     }
 
-    private String testping = null;
-    private String getTestPing(){
-        String s = testping;
-        if(s == null){
-            testping = null;
-        }
-        return s;
+    public BlockingPipelineSupplier getBlockingPipelineSupplier() {
+        return new BlockingPipelineSupplier(this);
     }
-
-
-    public String testPing(int max_ns){
-
-        String testping = null;
-
-        this.sendMessage("testping", "Server", "get me this");
-
-        long maxTime = System.nanoTime()+max_ns;
-        long start = System.nanoTime();
-        while(System.nanoTime() < maxTime){
-            String s = getTestPing();
-            if(s != null){
-                testping = s;
-                break;
-            }
-        }
-
-        long end = System.nanoTime();
-
-        System.out.println("Test: " + (end-start)+"ns" + " ("+(((double)(end-start))/1000000.0)+"ms)");
-
-        return testping;
-    }
-
 
     public boolean isReady(){
-        return this.isRunning() && this.isLogin_succesfull();
+        return this.isRunning() && this.isLoginSuccesfull();
     }
 
     public void makeDataTree(){
@@ -105,34 +75,57 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
         return new PipelineSupplier(this);
     }
 
-    protected void handleResult(String id, Status status, Object info){
+    protected void handleResult(String id, Status status, Object info) {
         try {
             DataResult.Result listener = futureListener.get(id);
+            //System.out.println("####### " + id + " " + status + " " + info);
             if (listener != null) {
+                //System.out.println("Listener found for id=" + id + " -> " + listener.getClass().getSimpleName());
                 if (listener instanceof DataResult.ValueResult result) {
-                    if(info == null){
+                    if (info == null) {
                         result.result(null, status);
-                    }else {
-                        if(info instanceof Number number){
+                    } else {
+                        if (info instanceof Number number) {
                             result.result(number.doubleValue(), status);
-                        }else{
+                        } else {
                             result.result(null, status);
                         }
-                        
+
                     }
-                }else if (listener instanceof DataResult.StoredSerializableResult result) {
-                    SerializerFactory factory = (SerializerFactory) extraListenerInfo.get(result);
+                } else if(listener instanceof DataResult.ValueMemberDataResult result) {
+                    //System.out.println("ValueMemberDataResult: " + info);
+                    if(info != null) {
+                        HashMap<String, Double> data = null;
+                        if (info instanceof JSONObject jsonObject) {
+                            data = new HashMap<>();
+                            for (String key : jsonObject.keySet()) {
+                                data.put(key, jsonObject.getDouble(key));
+                            }
+                        }
+                        result.result(data, status);
+                    } else {
+                        result.result(null, status);
+                    }
+
+                }else if(listener instanceof DataResult.ListTypeValueResult result){
+                    if(info == null){
+                        result.result(null,status);
+                    }else{
+                        result.result(info,status);
+                    }
+                }else if (listener instanceof DataResult.SpecificResult result) {
+                    ClientCommands.SerializerFactory factory = (ClientCommands.SerializerFactory) extraListenerInfo.get(result);
 
                     PandaDataSerializer pandaDataSerializer = null;
                     if(info != null){
                         pandaDataSerializer = (PandaDataSerializer) factory.create();
-                        JSONObject jsonObject = new JSONObject(""+info);
+                        JSONObject jsonObject = new JSONObject(info.toString());
                         pandaDataSerializer.deserialize(new DatabaseReader(jsonObject));
                     }
                     extraListenerInfo.remove(result);
                     result.result(pandaDataSerializer,status);
                 }else if (listener instanceof DataResult.ListStoredSerializableResult result) {
-                    SerializerFactory factory = (SerializerFactory) extraListenerInfo.get(result);
+                    ClientCommands.SerializerFactory factory = (ClientCommands.SerializerFactory) extraListenerInfo.get(result);
 
                     HashMap<String,PandaDataSerializer> data = null;
                     if(info != null){
@@ -157,7 +150,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
                     result.result(data, status);
                 }else if (listener instanceof DataResult.ValuesInfoResult result) {
 
-                    ValueDataStorage.ValueMembersInfo vmi = null;
+                    MemberValueDataStorage.ValueMembersInfo vmi = null;
                     if(info != null){
                         JSONObject vmiJSON = (JSONObject) info;
                         double avr = vmiJSON.getDouble("avr");
@@ -170,7 +163,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
                             members = (List) vmiJSON.getJSONArray("mem").toList();
                         }
 
-                        vmi = new ValueDataStorage.ValueMembersInfo(low,high,avr,size,members);
+                        vmi = new MemberValueDataStorage.ValueMembersInfo(low,high,avr,size,members);
                     }
 
                     result.result(vmi, status);
@@ -193,6 +186,22 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
                     }else {
                         result.result((String) info, status);
                     }
+                }else if (listener instanceof DataResult.ListTypeResult result) {
+                    if(info != null){
+                        if(info instanceof JSONArray){
+                            JSONArray jsonArray = (JSONArray) info;
+                            ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
+                            ArrayList<ListType> listTypes = new ArrayList<>();
+                            for(Object object : arrayList){
+                                if(object instanceof Number number){
+                                    listTypes.add(ListType.values()[number.intValue()]);
+                                }
+                            }
+                            result.resultList(listTypes, status);
+                        }
+                    }else{
+                        result.resultList(null, status);
+                    }
                 }else if (listener instanceof DataResult.ListResult result) {
                     if(info != null){
                         if(info instanceof JSONArray){
@@ -203,6 +212,15 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
                     }else{
                         result.resultList(null, status);
                     }
+                }else if (listener instanceof DataResult.ListSizeResult result) {
+                    if(info != null){
+                        if(info instanceof Number number){
+                            result.result(number.intValue(), status);
+                        }
+                    }else{
+                        result.result(0, status);
+                    }
+
                 }else if (listener instanceof DataResult.KeysResult result) {
                     if(info != null){
                         if(info instanceof JSONArray){
@@ -214,7 +232,8 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
                     }else{
                         result.resultList(null, status);
                     }
-
+                }else {
+                    System.err.println("Unknown Result-Type: " + listener.getClass().getName());
                 }
             }else{
                 System.err.println("###########################");
@@ -231,14 +250,55 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
     }
 
     @Override
-    public void getMemberData(String key, DataResult.MemberDataResult memberData) {
-        this.mainPipelineSupplier.getMemberData(key, memberData);
+    public void setText(String key, String member, String value, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.setText(key, member, value, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
     @Override
-    public <T> void getSerializableMemberData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult<T> memberData) {
-        this.mainPipelineSupplier.getSerializableMemberData(key, factory, memberData);
+    public void getTextKeys(DataResult.KeysResult keysResult) {
+        this.mainPipelineSupplier.getTextKeys(keysResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getTextMemberKeys(String key, DataResult.KeysResult keysResult) {
+        this.mainPipelineSupplier.getTextMemberKeys(key, keysResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getTextMemberData(String key, String member, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.getTextMemberData(key, member, textResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getTextKeyData(String key, DataResult.MemberDataResult memberDataResult) {
+        this.mainPipelineSupplier.getTextKeyData(key, memberDataResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeTextKey(String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeTextKey(key, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeTextMember(String key, String member, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.removeTextMember(key, member, textResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+
+
+
+
+    @Override
+    public <T> void setSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.setSerializable(key, member, serializer, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
@@ -255,109 +315,150 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands{
     }
 
     @Override
-    public <T> void storeSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
-        this.mainPipelineSupplier.storeSerializable(key,member,serializer,statusResult);
+    public <T> void getSerializableMemberData(String key, String member, SerializerFactory<T> type, DataResult.SpecificResult<T> specificResult) {
+        this.mainPipelineSupplier.getSerializableMemberData(key, member, type, specificResult);
         this.mainPipelineSupplier.sync();
     }
 
     @Override
-    public <T> void getStoredSerializable(String key, String member, SerializerFactory<T> type, DataResult.StoredSerializableResult<T> serializableResult) {
-        this.mainPipelineSupplier.getStoredSerializable(key,member,type,serializableResult);
+    public <T> void getSerializableKeyData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult listStoredSerializableResult) {
+        this.mainPipelineSupplier.getSerializableKeyData(key, factory, listStoredSerializableResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public <T> void addListEntry(String key, String listkey, ListType listType, T value, DataResult.StatusResult addListResult){
-        this.mainPipelineSupplier.addListEntry(key,listkey,listType,value,addListResult);
+    @Override
+    public void removeSerializableKey(String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeSerializableKey(key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public <T> void getList(String key, String listkey, ListType listType, DataResult.ListResult<T> listResult){
-        this.mainPipelineSupplier.getList(key,listkey,listType,listResult);
+    @Override
+    public void removeSerializableMember(String key, String member, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeSerializableMember(key, member, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public void get(String key, String member, DataResult.TextResult textResult){
-        this.mainPipelineSupplier.get(key,member,textResult);
+
+
+
+
+
+
+
+
+
+    @Override
+    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+        this.mainPipelineSupplier.setValue(key, member, value, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public void set(String key, String member, String value, DataResult.StatusResult setResult){
-        this.mainPipelineSupplier.set(key,member,value,setResult);
+    @Override
+    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+        this.mainPipelineSupplier.addValue(key, member, value, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public void getValue(String key, String member, DataResult.ValueResult valueResult){
-        this.mainPipelineSupplier.getValue(key,member,valueResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult){
-        this.mainPipelineSupplier.setValue(key,member,value,valueResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult){
-        this.mainPipelineSupplier.addValue(key,member,value,valueResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void removeValue(String key, String member, DataResult.StatusResult removeResult){
-        this.mainPipelineSupplier.removeValue(key,member,removeResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void remove(String key, String member, DataResult.StatusResult removeResult){
-        this.mainPipelineSupplier.remove(key,member,removeResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public <T> void removeList(String key, String listkey, ListType listType, DataResult.StatusResult removeResult){
-        this.mainPipelineSupplier.removeList(key,listkey,listType,removeResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public <T> void removeList(String key, ListType listType, DataResult.StatusResult removeResult){
-        this.mainPipelineSupplier.removeList(key,listType,removeResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public <T> void removeListIndex(String key, String listkey, ListType listType, int index, DataResult.StatusResult removeResult){
-        this.mainPipelineSupplier.removeListIndex(key,listkey,listType,index,removeResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public <T> void getListKeys(ListType listType, DataResult.KeysResult keysResult){
-        this.mainPipelineSupplier.getListKeys(listType,keysResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public <T> void getListKeys(String key, ListType listType, DataResult.KeysResult keysResult){
-        this.mainPipelineSupplier.getListKeys(key, listType,keysResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void getKeys(String key, DataResult.KeysResult keysResult){
-        this.mainPipelineSupplier.getKeys(key,keysResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void getKeys(DataResult.KeysResult keysResult){
-        this.mainPipelineSupplier.getKeys(keysResult);
-        this.mainPipelineSupplier.sync();
-    }
-
-    public void getValueKeys(DataResult.KeysResult keysResult){
+    @Override
+    public void getValueKeys(DataResult.KeysResult keysResult) {
         this.mainPipelineSupplier.getValueKeys(keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public void getValueKeys(String key, DataResult.KeysResult keysResult){
-        this.mainPipelineSupplier.getValueKeys(key,keysResult);
+    @Override
+    public void getValueMemberKeys(String key, DataResult.KeysResult keysResult) {
+        this.mainPipelineSupplier.getValueMemberKeys(key, keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    public void getValuesMemberInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult){
-        this.mainPipelineSupplier.getValuesMemberInfo(key,withKeys,valuesInfoResult);
+    @Override
+    public void getValueMemberData(String key, String member, DataResult.ValueResult valueResult) {
+        this.mainPipelineSupplier.getValueMemberData(key, member, valueResult);
         this.mainPipelineSupplier.sync();
     }
+
+    @Override
+    public void getValueKeyData(String key, DataResult.ValueMemberDataResult listStoredSerializableResult) {
+        this.mainPipelineSupplier.getValueKeyData(key, listStoredSerializableResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeValueKey(String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeValueKey(key, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeValueMember(String key, String member, DataResult.ValueResult valueResult) {
+        this.mainPipelineSupplier.removeValueMember(key, member, valueResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getValueInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult) {
+        this.mainPipelineSupplier.getValueInfo(key, withKeys, valuesInfoResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+
+
+
+
+    @Override
+    public void addList(ListType listType, String key, Object value, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.addList(listType, key, value, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeListtype(ListType listType, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeListtype(listType, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeListKey(ListType listType, String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeListKey(listType, key, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void removeListIndex(ListType listType, String key, int index, DataResult.ListTypeValueResult specificResult) {
+        this.mainPipelineSupplier.removeListIndex(listType, key, index, specificResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getListKeys(ListType listType, DataResult.KeysResult keysResult) {
+        this.mainPipelineSupplier.getListKeys(listType, keysResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getListTypes(DataResult.ListTypeResult listResult) {
+        this.mainPipelineSupplier.getListTypes(listResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public <T> void getListData(ListType<T> listType, String key, DataResult.ListResult<T> listResult) {
+        this.mainPipelineSupplier.getListData(listType, key, listResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public <T> void getListIndex(ListType<T> listType, String key, int index, DataResult.ListTypeValueResult<T> specificResult) {
+        this.mainPipelineSupplier.getListIndex(listType, key, index, specificResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+    @Override
+    public void getListSize(ListType listType, String key, DataResult.ListSizeResult listSizeResult) {
+        this.mainPipelineSupplier.getListSize(listType, key, listSizeResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
 }

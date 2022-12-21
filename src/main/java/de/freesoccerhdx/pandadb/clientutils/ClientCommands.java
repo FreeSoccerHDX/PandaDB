@@ -9,111 +9,46 @@ public interface ClientCommands {
         T create();
     }
 
-    public void getMemberData(String key, DataResult.MemberDataResult memberData);
+    public void setText(String key, String member, String value, DataResult.StatusResult statusResult);
+    public void getTextKeys(DataResult.KeysResult keysResult);
+    public void getTextMemberKeys(String key, DataResult.KeysResult keysResult);
+    public void getTextMemberData(String key, String member, DataResult.TextResult textResult);
+    public void getTextKeyData(String key, DataResult.MemberDataResult memberDataResult);
+    public void removeTextKey(String key, DataResult.StatusResult statusResult);
+    public void removeTextMember(String key, String member, DataResult.TextResult textResult);
 
-    public <T> void getSerializableMemberData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult<T> memberData);
 
+    public <T> void setSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult);
     public void getSerializableKeys(DataResult.KeysResult keysResult);
-
     public void getSerializableMemberKeys(String key, DataResult.KeysResult keysResult);
+    public <T> void getSerializableMemberData(String key, String member, SerializerFactory<T> type, DataResult.SpecificResult<T> specificResult);
+    public <T> void getSerializableKeyData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult listStoredSerializableResult);
+    public void removeSerializableKey(String key, DataResult.StatusResult statusResult);
+    public void removeSerializableMember(String key, String member, DataResult.StatusResult statusResult);
 
-    public <T> void storeSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult);
 
-    public <T> void getStoredSerializable(String key, String member, SerializerFactory<T> type, DataResult.StoredSerializableResult<T> serializableResult);
-
-    /**
-     * Adds a specific value to a ListType withing a Key with the Listkey
-     * */
-    public <T> void addListEntry(String key, String listkey, ListType listType, T value, DataResult.StatusResult addListResult);
-
-    /**
-     * Gets the specific list of the listtype is the same and the list exist or else null
-     * */
-    public <T> void getList(String key, String listkey, ListType listType, DataResult.ListResult<T> listResult);
-
-    /**
-     * Gets a specific text or null if not exist
-     * */
-    public void get(String key, String member, DataResult.TextResult textResult);
-
-    /**
-     * Sets a specific text
-     * */
-    public void set(String key, String member, String value, DataResult.StatusResult setResult);
-
-    /**
-     * Gets the specific value or null if not set
-     * */
-    public void getValue(String key, String member, DataResult.ValueResult future);
-
-    /**
-     * Sets the specific value
-     * */
     public void setValue(String key, String member, double value, DataResult.ValueResult valueResult);
-
-    /**
-     * Add/Subtract the specific value
-     * */
     public void addValue(String key, String member, double value, DataResult.ValueResult valueResult);
-
-    /**
-     * Remove a specific value
-     * */
-    public void removeValue(String key, String member, DataResult.StatusResult removeResult);
-
-    /**
-     * Remove a specific set text
-     * */
-    public void remove(String key, String member, DataResult.StatusResult removeResult);
-
-    /**
-     * Remove a specific list within a key
-     * */
-    public <T> void removeList(String key, String listkey, ListType listType, DataResult.StatusResult removeResult);
-
-    /**
-     * Remove a specific key that stores lists
-     * */
-    public <T> void removeList(String key, ListType listType, DataResult.StatusResult removeResult);
-
-    /**
-     * Remove a specific index within a list of an key
-     * */
-    public <T> void removeListIndex(String key, String listkey, ListType listType, int index, DataResult.StatusResult removeResult);
-
-    /**
-     * Gets all Keys stored under the specific ListType
-     * */
-    public <T> void getListKeys(ListType listType, DataResult.KeysResult keysResult);
-
-    /**
-     * Gets all ListKeys stored under the specific key
-     * */
-    public <T> void getListKeys(String key, ListType listType, DataResult.KeysResult keysResult);
-
-    /**
-     * Gets all Text-Keys stored under the key
-     * */
-    public void getKeys(String key, DataResult.KeysResult keysResult);
-
-    /**
-     * Gets all Text-Keys stored
-     * */
-    public void getKeys(DataResult.KeysResult keysResult);
-
-    /**
-     * Gets all Value-Keys stored
-     * */
     public void getValueKeys(DataResult.KeysResult keysResult);
+    public void getValueMemberKeys(String key, DataResult.KeysResult keysResult);
+    public void getValueMemberData(String key, String member, DataResult.ValueResult valueResult);
+    public void getValueKeyData(String key, DataResult.ValueMemberDataResult listStoredSerializableResult);
+    public void removeValueKey(String key, DataResult.StatusResult statusResult);
+    public void removeValueMember(String key, String member, DataResult.ValueResult valueResult);
+    public void getValueInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult);
 
-    /**
-     * Gets all Value-Keys stored under the key
-     * */
-    public void getValueKeys(String key, DataResult.KeysResult keysResult);
 
-    /**
-     * Gets a small info about the current state of the values from the members under a specific key
-     * */
-    public void getValuesMemberInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult);
+
+    public void addList(ListType listType, String key, Object value, DataResult.StatusResult statusResult);
+    public void removeListtype(ListType listType, DataResult.StatusResult statusResult);
+    public void removeListKey(ListType listType, String key, DataResult.StatusResult statusResult);
+    public <T> void removeListIndex(ListType<T> listType, String key, int index, DataResult.ListTypeValueResult<T> specificResult);
+    public void getListKeys(ListType listType, DataResult.KeysResult keysResult);
+    public void getListTypes(DataResult.ListTypeResult listResult);
+    public <T> void getListData(ListType<T> listType, String key, DataResult.ListResult<T> listResult);
+    public <T> void getListIndex(ListType<T> listType, String key, int index, DataResult.ListTypeValueResult<T> specificResult);
+    public <T> void getListSize(ListType<T> listType, String key, DataResult.ListSizeResult sizeResult);
+
+
 
 }

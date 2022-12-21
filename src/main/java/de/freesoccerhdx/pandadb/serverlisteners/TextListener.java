@@ -1,10 +1,13 @@
 package de.freesoccerhdx.pandadb.serverlisteners;
 
-import de.freesoccerhdx.pandadb.PandaClientChannel;
+import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.List;
 
 public class TextListener {
 
@@ -14,12 +17,41 @@ public class TextListener {
         this.pandaServer = pandaServer;
     }
 
-    public JSONObject parseData(PandaClientChannel channel, String data){
-        JSONObject jsonObject = new JSONObject(data);
+    public JSONObject parseData(PandaClientChannel channel, JSONObject jsonObject){
         String questid = jsonObject.has("q") ? jsonObject.getString("q") : null;
-        String key = jsonObject.getString("k");
-        String member = jsonObject.getString("m");
+        String key = jsonObject.has("k") ? jsonObject.getString("k") : null;
+        String member = jsonObject.has("m") ? jsonObject.getString("m") : null;
 
+
+        TextsDataStorage tds = pandaServer.getDataStorage().getTextData();
+
+        if(channel == PandaClientChannel.TEXT_SET) {
+            String value = jsonObject.getString("v");
+            Status status = tds.set(key, member, value);
+            return createTotalObject(questid, status);
+        }else if(channel == PandaClientChannel.TEXT_GET_KEYS){
+            Pair<Status, List<String>> info = tds.getKeys();
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.TEXT_GET_MEMBER_KEYS){
+            Pair<Status, List<String>> info = tds.getMemberKeys(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.TEXT_GET_MEMBER_DATA){
+            Pair<Status, String> info = tds.getMemberData(key, member);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.TEXT_GET_KEY_DATA){
+            Pair<Status, HashMap<String, String>> info = tds.getKeyData(key);
+            //System.err.println("??????????????? " + info.getClass().getName());
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.TEXT_REMOVE_KEY){
+            Status info = tds.removeKey(key);
+            return createTotalObject(questid, info);
+        }else if(channel == PandaClientChannel.TEXT_REMOVE_MEMBER){
+            Pair<Status, String> info = tds.removeMember(key, member);
+            return createTotalObject(questid, info);
+        }else {
+            System.out.println("[PandaServer] Unknown Channel for TextListener: " + channel + " data="+jsonObject);
+        }
+        /*
         if(channel == PandaClientChannel.GET) {
             Pair<Status, String> value = pandaServer.getDataStorage().get(key, member);
             return createTotalObject(questid, value);
@@ -28,6 +60,7 @@ public class TextListener {
             Status erfolg = pandaServer.getDataStorage().set(key, member, value);
             return createTotalObject(questid, erfolg);
         }
+         */
         return null;
     }
 
@@ -37,12 +70,16 @@ public class TextListener {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);
             if (info != null) {
-                if(info instanceof Status) {
-                    jsonObject.put("s", ((Status) info).ordinal());
-                }else{
-                    Pair<Status,String> pair = (Pair<Status, String>) info;
-                    jsonObject.put("s", pair.getFirst().ordinal());
-                    jsonObject.put("i", pair.getSecond());
+                if(info instanceof Status s) {
+                    jsonObject.put("s", s.ordinal());
+                }else if(info instanceof Pair pair) {
+                    jsonObject.put("s", ((Status)pair.getFirst()).ordinal());
+                    if(pair.getSecond() instanceof HashMap map) {
+                        jsonObject.put("i", ((HashMap<String, String>)map));
+                    }else {
+                        jsonObject.put("i", pair.getSecond());
+                    }
+                    //System.err.println("########### " + info.getClass().getName() + " -> " + pair.getSecond().getClass().getName());
                 }
             }
             return jsonObject;

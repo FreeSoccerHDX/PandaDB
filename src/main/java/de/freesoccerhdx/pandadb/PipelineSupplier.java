@@ -2,6 +2,7 @@ package de.freesoccerhdx.pandadb;
 
 import de.freesoccerhdx.pandadb.clientutils.ClientCommands;
 import de.freesoccerhdx.pandadb.clientutils.DatabaseWriter;
+import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
@@ -30,7 +31,7 @@ public class PipelineSupplier implements ClientCommands {
      *
      * @return If the message was sended or not
      * */
-    public boolean sync(){
+    public boolean sync() {
         if(size() > 0) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("size", waitingCalls.size());
@@ -73,7 +74,7 @@ public class PipelineSupplier implements ClientCommands {
     private JSONObject prepareValuePacket(String key, String member, DataResult.Result future) {
         String uuid = this.currentUUID + "#" + waitingCalls.size();
         if(future != null) {
-            waitingFutureListener.put(uuid.toString(), (DataResult.Result) future);
+            waitingFutureListener.put(uuid, future);
         }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("q", "#" + waitingCalls.size());
@@ -87,306 +88,331 @@ public class PipelineSupplier implements ClientCommands {
         return jsonObject;
     }
 
+
     @Override
-    public void getMemberData(String key, DataResult.MemberDataResult memberData) {
-        if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, memberData);
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GET_MEMBER_DATA, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key can't be null!");
+    public void setText(String key, String member, String value, DataResult.StatusResult statusResult) {
+        if(notnull(key, member, value)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, statusResult);
+            jsonObject.put("v", value);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_SET, jsonObject));
+        }else {
+            throw new IllegalArgumentException("Key, member or value is null");
         }
     }
 
     @Override
-    public <T> void getSerializableMemberData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult<T> memberData) {
+    public void getTextKeys(DataResult.KeysResult keysResult) {
+        JSONObject jsonObject = prepareValuePacket(null, null, keysResult);
+        this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_GET_KEYS, jsonObject));
+    }
+
+    @Override
+    public void getTextMemberKeys(String key, DataResult.KeysResult keysResult) {
         if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, memberData);
-            extraStuff.put(memberData, factory);
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GET_SERIALIZABLE_MEMBER_DATA, jsonObject));
+            JSONObject jsonObject = prepareValuePacket(key, null, keysResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_GET_MEMBER_KEYS, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key can't be null!");
+            throw new IllegalArgumentException("Key is null");
         }
     }
 
+    @Override
+    public void getTextMemberData(String key, String member, DataResult.TextResult textResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, textResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_GET_MEMBER_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or member is null");
+        }
+    }
+
+    @Override
+    public void getTextKeyData(String key, DataResult.MemberDataResult memberDataResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, memberDataResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_GET_KEY_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void removeTextKey(String key, DataResult.StatusResult statusResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_REMOVE_KEY, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void removeTextMember(String key, String member, DataResult.TextResult textResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, textResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.TEXT_REMOVE_MEMBER, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or member is null");
+        }
+    }
+
+    @Override
+    public <T> void setSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
+        if(notnull(key, member, serializer)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, statusResult);
+            DatabaseWriter writer = new DatabaseWriter();
+            serializer.serialize(writer);
+            jsonObject.put("v", writer.toJSON());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_SET, jsonObject));
+        }else {
+            throw new IllegalArgumentException("Key, member or serializer is null");
+        }
+    }
     @Override
     public void getSerializableKeys(DataResult.KeysResult keysResult) {
-        JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
-        jsonObject.put("gettype", 11);
-        this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
+        JSONObject jsonObject = prepareValuePacket(null, null, keysResult);
+        this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_GET_KEYS, jsonObject));
     }
 
     @Override
     public void getSerializableMemberKeys(String key, DataResult.KeysResult keysResult) {
         if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
-            jsonObject.put("gettype", 10);
-            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
+            JSONObject jsonObject = prepareValuePacket(key, null, keysResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_GET_MEMBER_KEYS, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key can't be null!");
+            throw new IllegalArgumentException("Key is null");
         }
     }
 
     @Override
-    public <T> void storeSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
-        if(notnull(key,member,serializer)) {
+    public <T> void getSerializableMemberData(String key, String member, SerializerFactory<T> factory, DataResult.SpecificResult<T> specificResult) {
+        if(notnull(key, member, factory)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, specificResult);
+            extraStuff.put(specificResult, factory);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_GET_MEMBER_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key, member or factory is null");
+        }
+    }
+
+
+    @Override
+    public <T> void getSerializableKeyData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult listStoredSerializableResult) {
+        if(notnull(key, factory)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, listStoredSerializableResult);
+            extraStuff.put(listStoredSerializableResult, factory);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_GET_KEY_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or factory is null");
+        }
+    }
+
+    @Override
+    public void removeSerializableKey(String key, DataResult.StatusResult statusResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_REMOVE_KEY, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void removeSerializableMember(String key, String member, DataResult.StatusResult statusResult) {
+        if(notnull(key, member)) {
             JSONObject jsonObject = prepareValuePacket(key, member, statusResult);
-            DatabaseWriter writer = new DatabaseWriter();
-            serializer.serialize(writer);
-            jsonObject.put("pds", writer.toJSON());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.STORE_SERIALIZABLE, jsonObject));
+            this.waitingCalls.add(Pair.of(PandaClientChannel.SERIALIZABLE_REMOVE_MEMBER, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key, Member and DataSerializer can't be null!");
+            throw new IllegalArgumentException("Key or member is null");
         }
     }
 
     @Override
-    public <T> void getStoredSerializable(String key, String member, SerializerFactory<T> factory, DataResult.StoredSerializableResult<T> serializableResult) {
-        if(notnull(key,member,factory)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, serializableResult);
-            this.extraStuff.put(serializableResult,factory);
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GET_STORED_SERIALIZABLE, jsonObject));
+    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
+            jsonObject.put("v", value);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_SET, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key, Member and SerializerFactor can't be null!");
+            throw new IllegalArgumentException("Key or member is null");
         }
     }
 
     @Override
-    public <T> void addListEntry(String key, String listkey, ListType listType, T value, DataResult.StatusResult addListResult){
-        if(notnull(key,listType,value)) {
+    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
+            jsonObject.put("v", value);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_ADD, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or member is null");
+        }
+    }
+
+    @Override
+    public void getValueKeys(DataResult.KeysResult keysResult) {
+        JSONObject jsonObject = prepareValuePacket(null, null, keysResult);
+        this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_GET_KEYS, jsonObject));
+    }
+
+    @Override
+    public void getValueMemberKeys(String key, DataResult.KeysResult keysResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, keysResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_GET_MEMBER_KEYS, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void getValueMemberData(String key, String member, DataResult.ValueResult valueResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_GET_MEMBER_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or member is null");
+        }
+    }
+
+    @Override
+    public void getValueKeyData(String key, DataResult.ValueMemberDataResult listStoredSerializableResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, listStoredSerializableResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_GET_KEY_DATA, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void removeValueKey(String key, DataResult.StatusResult statusResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_REMOVE_KEY, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+    @Override
+    public void removeValueMember(String key, String member, DataResult.ValueResult valueResult) {
+        if(notnull(key, member)) {
+            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_REMOVE_MEMBER, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key or member is null");
+        }
+    }
+
+    @Override
+    public void getValueInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult) {
+        if(notnull(key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, valuesInfoResult);
+            jsonObject.put("km", withKeys);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.VALUE_GET_VALUE_INFO, jsonObject));
+        }else{
+            throw new IllegalArgumentException("Key is null");
+        }
+    }
+
+
+    @Override
+    public void addList(ListType listType, String key, Object value, DataResult.StatusResult statusResult) {
+        if(notnull(listType, key, value)) {
             if (validateListType(listType, value)) {
-                JSONObject jsonObject = prepareValuePacket(key, null, addListResult);
-                jsonObject.put("type", listType.ordinal());
-                jsonObject.put("value", value);
-                jsonObject.put("listkey", listkey);
-                //this.simpleSocketClient.sendMessage("addlist", "Server", jsonObject.toString());
-                this.waitingCalls.add(Pair.of(PandaClientChannel.ADDLIST, jsonObject));
-            } else {
-                throw new IllegalArgumentException("ListType(" + listType + ") did not allow the value(" + value + ")");
+                JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
+                jsonObject.put("t", listType.ordinal());
+                jsonObject.put("v", value);
+                this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_ADD_LIST_ENTRY, jsonObject));
+            }else{
+                throw new IllegalArgumentException("Value is not valid for list type");
             }
         }else{
-            throw new IllegalArgumentException("Key, ListType and Value can't be null!");
+            throw new IllegalArgumentException("ListType, key or value is null");
         }
     }
 
     @Override
-    public <T> void getList(String key, String listkey, ListType listType, DataResult.ListResult<T> listResult){
-        if(notnull(key, listType)) {
-            JSONObject jsonObject = prepareValuePacket(key, null, listResult);
-            jsonObject.put("type", listType.ordinal());
-            jsonObject.put("listkey", listkey);
-            //this.simpleSocketClient.sendMessage("getlist", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GETLIST, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and ListType can't be null!");
-        }
-    }
-
-    @Override
-    public void get(String key, String member, DataResult.TextResult textResult){
-        if(notnull(key,member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, textResult);
-            //this.simpleSocketClient.sendMessage("get", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GET, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public void set(String key, String member, String value, DataResult.StatusResult setResult){
-        if(notnull(key,member,value)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, setResult);
-            jsonObject.put("value", value);
-            //this.simpleSocketClient.sendMessage("set","Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.SET, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key, Member and Value can't be null!");
-        }
-    }
-
-    @Override
-    public void getValue(String key, String member, DataResult.ValueResult future) {
-        if (notnull(key, member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, future);
-            //this.simpleSocketClient.sendMessage("getvalue","Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.GETVALUE, jsonObject));
-        } else {
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult){
-        if(notnull(key,member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
-            jsonObject.put("value", value);
-            //this.simpleSocketClient.sendMessage("setvalue", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.SETVALUE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult){
-        if(notnull(key,member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, valueResult);
-            jsonObject.put("value", value);
-            //this.simpleSocketClient.sendMessage("addvalue", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.ADDVALUE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public void removeValue(String key, String member, DataResult.StatusResult removeResult){
-        if(notnull(key,member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, removeResult);
-            jsonObject.put("removetype", 0);
-            //this.simpleSocketClient.sendMessage("remove", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.REMOVE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public void remove(String key, String member, DataResult.StatusResult removeResult){
-        if(notnull(key,member)) {
-            JSONObject jsonObject = prepareValuePacket(key, member, removeResult);
-            jsonObject.put("removetype", 1);
-            //this.simpleSocketClient.sendMessage("remove", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.REMOVE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and Member can't be null!");
-        }
-    }
-
-    @Override
-    public <T> void removeList(String key, String listkey, ListType listType, DataResult.StatusResult removeResult){
-        if(notnull(key,listkey,listType)) {
-            JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
-            jsonObject.put("removetype", 2);
-            jsonObject.put("type", listType.ordinal());
-            jsonObject.put("listkey", listkey);
-            //this.simpleSocketClient.sendMessage("remove", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.REMOVE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key, Listkey and ListType can't be null!");
-        }
-    }
-
-    @Override
-    public <T> void removeList(String key, ListType listType, DataResult.StatusResult removeResult){
-        if(notnull(key,listType)) {
-            JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
-            jsonObject.put("removetype", 4);
-            jsonObject.put("type", listType.ordinal());
-            //this.simpleSocketClient.sendMessage("remove", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.REMOVE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key and ListType can't be null!");
-        }
-    }
-
-    @Override
-    public <T> void removeListIndex(String key, String listkey, ListType listType, int index, DataResult.StatusResult removeResult){
-        if(notnull(key,listkey,listType)) {
-            JSONObject jsonObject = prepareValuePacket(key, null, removeResult);
-            jsonObject.put("removetype", 3);
-            jsonObject.put("type", listType.ordinal());
-            jsonObject.put("listkey", listkey);
-            jsonObject.put("index", index);
-            //this.simpleSocketClient.sendMessage("remove", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.REMOVE, jsonObject));
-        }else{
-            throw new IllegalArgumentException("Key, ListKey and ListType can't be null!");
-        }
-    }
-
-    @Override
-    public <T> void getListKeys(ListType listType, DataResult.KeysResult keysResult){
+    public void removeListtype(ListType listType, DataResult.StatusResult statusResult) {
         if(notnull(listType)) {
-            JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
-            jsonObject.put("gettype", 0);
-            jsonObject.put("type", listType.ordinal());
-
-            //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
-
+            JSONObject jsonObject = prepareValuePacket(null, null, statusResult);
+            jsonObject.put("t", listType.ordinal());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_REMOVE_LISTTYPE, jsonObject));
         }else{
-            throw new IllegalArgumentException("ListType can't be null!");
+            throw new IllegalArgumentException("ListType is null");
         }
     }
 
     @Override
-    public <T> void getListKeys(String key, ListType listType, DataResult.KeysResult keysResult){
-        if(notnull(key, listType)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
-            jsonObject.put("gettype", 1);
-            jsonObject.put("type", listType.ordinal());
-            //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
+    public void removeListKey(ListType listType, String key, DataResult.StatusResult statusResult) {
+        if(notnull(listType, key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
+            jsonObject.put("t", listType.ordinal());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_REMOVE_LISTKEY, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key and ListType can't be null!");
+            throw new IllegalArgumentException("ListType or key is null");
         }
     }
 
     @Override
-    public void getKeys(String key, DataResult.KeysResult keysResult){
-        if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
-            jsonObject.put("gettype", 2);
-            //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
+    public void removeListIndex(ListType listType, String key, int index, DataResult.ListTypeValueResult specificResult) {
+        if(notnull(listType, key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, specificResult);
+            jsonObject.put("t", listType.ordinal());
+            jsonObject.put("in", index);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_REMOVE_INDEX, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key can't be null!");
+            throw new IllegalArgumentException("ListType or key is null");
         }
     }
 
     @Override
-    public void getKeys(DataResult.KeysResult keysResult){
-
-        JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
-        jsonObject.put("gettype", 3);
-
-       //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-        this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
-    }
-
-    @Override
-    public void getValueKeys(DataResult.KeysResult keysResult){
-
-        JSONObject jsonObject = prepareValuePacket(null,null, keysResult);
-        jsonObject.put("gettype", 4);
-        //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-        this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
-    }
-
-    @Override
-    public void getValueKeys(String key, DataResult.KeysResult keysResult){
-        if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, keysResult);
-            jsonObject.put("gettype", 5);
-            //this.simpleSocketClient.sendMessage("listkeys", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTKEYS, jsonObject));
+    public void getListKeys(ListType listType, DataResult.KeysResult keysResult) {
+        if(notnull(listType)) {
+            JSONObject jsonObject = prepareValuePacket(null, null, keysResult);
+            jsonObject.put("t", listType.ordinal());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_GET_LISTTYPE_KEYS, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key can't be null!");
+            throw new IllegalArgumentException("ListType is null");
         }
     }
 
     @Override
-    public void getValuesMemberInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult){
-        if(notnull(key)) {
-            JSONObject jsonObject = prepareValuePacket(key,null, valuesInfoResult);
-            if(withKeys){
-                jsonObject.put("km", true);
-            }
-            //this.simpleSocketClient.sendMessage("infovalues", "Server", jsonObject.toString());
-            this.waitingCalls.add(Pair.of(PandaClientChannel.INFOVALUES, jsonObject));
+    public void getListTypes(DataResult.ListTypeResult listResult) {
+        JSONObject jsonObject = prepareValuePacket(null, null, listResult);
+        this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_GET_LISTTYPES, jsonObject));
+    }
+
+    @Override
+    public <T> void getListData(ListType<T> listType, String key, DataResult.ListResult<T> listResult) {
+        if(notnull(listType, key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, listResult);
+            jsonObject.put("t", listType.ordinal());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_GET_LISTKEY_DATA, jsonObject));
         }else{
-            throw new IllegalArgumentException("Key can't be null!");
+            throw new IllegalArgumentException("ListType or key is null");
+        }
+    }
+
+    public <T> void getListIndex(ListType<T> listType, String key, int index, DataResult.ListTypeValueResult<T> specificResult) {
+        if(notnull(listType, key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, specificResult);
+            jsonObject.put("t", listType.ordinal());
+            jsonObject.put("in", index);
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_GET_LISTINDEX, jsonObject));
+        }else{
+            throw new IllegalArgumentException("ListType or key is null");
+        }
+    }
+
+    public <T> void getListSize(ListType<T> listType, String key, DataResult.ListSizeResult sizeResult) {
+        if(notnull(listType, key)) {
+            JSONObject jsonObject = prepareValuePacket(key, null, sizeResult);
+            jsonObject.put("t", listType.ordinal());
+            this.waitingCalls.add(Pair.of(PandaClientChannel.LISTDATA_GET_LISTSIZE, jsonObject));
+        }else{
+            throw new IllegalArgumentException("ListType or key is null");
         }
     }
 
@@ -408,7 +434,7 @@ public class PipelineSupplier implements ClientCommands {
         }
         return false;
     }
-    
+
     
     
 }
