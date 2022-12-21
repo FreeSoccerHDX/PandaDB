@@ -11,7 +11,7 @@ import java.util.List;
 
 public class TextListener {
 
-    private PandaServer pandaServer;
+    private final PandaServer pandaServer;
 
     public TextListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
@@ -40,7 +40,6 @@ public class TextListener {
             return createTotalObject(questid, info);
         }else if(channel == PandaClientChannel.TEXT_GET_KEY_DATA){
             Pair<Status, HashMap<String, String>> info = tds.getKeyData(key);
-            //System.err.println("??????????????? " + info.getClass().getName());
             return createTotalObject(questid, info);
         }else if(channel == PandaClientChannel.TEXT_REMOVE_KEY){
             Status info = tds.removeKey(key);
@@ -51,16 +50,7 @@ public class TextListener {
         }else {
             System.out.println("[PandaServer] Unknown Channel for TextListener: " + channel + " data="+jsonObject);
         }
-        /*
-        if(channel == PandaClientChannel.GET) {
-            Pair<Status, String> value = pandaServer.getDataStorage().get(key, member);
-            return createTotalObject(questid, value);
-        }else if(channel == PandaClientChannel.SET) {
-            String value = jsonObject.getString("value");
-            Status erfolg = pandaServer.getDataStorage().set(key, member, value);
-            return createTotalObject(questid, erfolg);
-        }
-         */
+
         return null;
     }
 

@@ -21,11 +21,11 @@ import java.util.TimerTask;
 
 public class ServerDataStorage {
 
-    private ValueDataStorage valueData = new ValueDataStorage(this);
-    private TextsDataStorage textData = new TextsDataStorage(this);
-    private TextsDataStorage serializableData = new TextsDataStorage(this);
+    private final ValueDataStorage valueData = new ValueDataStorage(this);
+    private final TextsDataStorage textData = new TextsDataStorage(this);
+    private final TextsDataStorage serializableData = new TextsDataStorage(this);
 
-    private ListTypeDataStorage listData = new ListTypeDataStorage(this);
+    private final ListTypeDataStorage listData = new ListTypeDataStorage(this);
 
     public static File databaseFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","panda.db");
     public static File dataTreeFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","datatree.txt");
@@ -74,14 +74,13 @@ public class ServerDataStorage {
 
 
     public void generateDataTree() {
-        FileOutputStream fos = null;
         try {
             dataTreeFile.mkdirs();
             if(dataTreeFile.exists()){
                 dataTreeFile.delete();
             }
             dataTreeFile.createNewFile();
-            fos = new FileOutputStream(dataTreeFile);
+            FileOutputStream fos = new FileOutputStream(dataTreeFile);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
@@ -189,52 +188,51 @@ public class ServerDataStorage {
             System.err.println("No database found!");
             return;
         }
-        DataInputStream dis = new DataInputStream(new FileInputStream(databaseFile));
-        try {
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(databaseFile))) {
             int valuedatasize = dis.readInt();
-            for(int i = 0; i < valuedatasize; i++){
+            for (int i = 0; i < valuedatasize; i++) {
                 String key = dis.readUTF();
                 MemberValueDataStorage memberMap = new MemberValueDataStorage();
 
                 int membersize = dis.readInt();
-                for(int a = 0; a < membersize; a++){
+                for (int a = 0; a < membersize; a++) {
                     String member = dis.readUTF();
                     double value = dis.readDouble();
-                    memberMap.put(member,value);
+                    memberMap.put(member, value);
                 }
-                if(memberMap.size() > 0) {
+                if (memberMap.size() > 0) {
                     valueData.put(key, memberMap);
                 }
             }
 
             int textdatasize = dis.readInt();
-            for(int i = 0; i < textdatasize; i++){
+            for (int i = 0; i < textdatasize; i++) {
                 String key = dis.readUTF();
                 HashMap<String, String> memberMap = new HashMap<>();
 
                 int membersize = dis.readInt();
-                for(int a = 0; a < membersize; a++){
+                for (int a = 0; a < membersize; a++) {
                     String member = dis.readUTF();
                     String value = dis.readUTF();
-                    memberMap.put(member,value);
+                    memberMap.put(member, value);
                 }
-                if(memberMap.size() > 0) {
+                if (memberMap.size() > 0) {
                     textData.put(key, memberMap);
                 }
             }
 
             int seridatasize = dis.readInt();
-            for(int i = 0; i < seridatasize; i++){
+            for (int i = 0; i < seridatasize; i++) {
                 String key = dis.readUTF();
                 HashMap<String, String> memberMap = new HashMap<>();
 
                 int membersize = dis.readInt();
-                for(int a = 0; a < membersize; a++){
+                for (int a = 0; a < membersize; a++) {
                     String member = dis.readUTF();
                     String value = dis.readUTF();
-                    memberMap.put(member,value);
+                    memberMap.put(member, value);
                 }
-                if(memberMap.size() > 0) {
+                if (memberMap.size() > 0) {
                     serializableData.put(key, memberMap);
                 }
             }
@@ -243,22 +241,22 @@ public class ServerDataStorage {
             for (ListType listType : ListType.values()) {
                 int listamount = dis.readInt();
 
-                if(listamount > 0){
+                if (listamount > 0) {
                     HashMap<String, List<Object>> keydata = new HashMap<>();
-                    for(int i = 0; i < listamount; i++){
+                    for (int i = 0; i < listamount; i++) {
                         String key = dis.readUTF();
                         int keysize = dis.readInt();
                         List<Object> memberdata = new ArrayList<>();
-                        for(int a = 0; a < keysize; a++){
+                        for (int a = 0; a < keysize; a++) {
                             Object readyobj = listType.read(dis);
                             memberdata.add(readyobj);
                         }
 
-                        if(memberdata.size() > 0){
+                        if (memberdata.size() > 0) {
                             keydata.put(key, memberdata);
                         }
                     }
-                    if(keydata.size() > 0) {
+                    if (keydata.size() > 0) {
                         listData.put(listType, keydata);
                     }
 
@@ -266,10 +264,6 @@ public class ServerDataStorage {
 
             }
 
-        }finally {
-            if(dis != null){
-                dis.close();
-            }
         }
     }
 
@@ -279,12 +273,11 @@ public class ServerDataStorage {
             databaseFile.delete();
         }
 
-        DataOutputStream dos = new DataOutputStream(new FileOutputStream(databaseFile));
-        try {
+        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(databaseFile))) {
             HashMap<String, MemberValueDataStorage> copyvaluedata = (HashMap<String, MemberValueDataStorage>) valueData.clone();
             HashMap<String, HashMap<String, String>> copytextdata = (HashMap<String, HashMap<String, String>>) textData.clone();
             HashMap<String, HashMap<String, String>> seritextdata = (HashMap<String, HashMap<String, String>>) serializableData.clone();
-            HashMap<ListType, HashMap<String,List<Object>>> listclonedata = (HashMap<ListType, HashMap<String, List<Object>>>) listData.clone();
+            HashMap<ListType, HashMap<String, List<Object>>> listclonedata = (HashMap<ListType, HashMap<String, List<Object>>>) listData.clone();
 
             dos.writeInt(copyvaluedata.size()); // size of valueData
             for (String key : copyvaluedata.keySet()) {
@@ -336,10 +329,6 @@ public class ServerDataStorage {
                 } else {
                     dos.writeInt(0);
                 }
-            }
-        }finally {
-            if(dos != null) {
-                dos.close();
             }
         }
 

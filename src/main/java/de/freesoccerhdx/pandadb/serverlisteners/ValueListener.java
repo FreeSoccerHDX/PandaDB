@@ -11,7 +11,7 @@ import java.util.List;
 
 public class ValueListener {
 
-    private PandaServer pandaServer;
+    private final PandaServer pandaServer;
 
     public ValueListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
@@ -23,7 +23,6 @@ public class ValueListener {
             jsonObject.put("id", questid);
             jsonObject.put("s", ((Status)info.getFirst()).ordinal());
             Object value = info.getSecond();
-            //System.err.println("Error: " + (value == null ? null : value.getClass().getSimpleName()));
             if (value != null) {
                 if(value instanceof MemberValueDataStorage) {
                     jsonObject.put("i", ((HashMap<String,Double>) value));
@@ -98,23 +97,6 @@ public class ValueListener {
         }else {
             System.out.println("[PandaServer] Unknown Channel for ValueListener: " + channel + " data="+jsonObject);
         }
-        /*
-        if(channel == PandaClientChannel.GETVALUE) {
-            Pair<Status, Double> value = pandaServer.getDataStorage().getValueData().getValue(key, member);
-            return createTotalObject(questid, value);
-        }else if(channel == PandaClientChannel.SETVALUE) {
-            Double value = jsonObject.getDouble("value");
-            Pair<Status, Double> erfolg = pandaServer.getDataStorage().getValueData().setValue(key, member, value);
-            return createTotalObject(questid, erfolg);
-        }else if(channel == PandaClientChannel.ADDVALUE){
-            Double value = jsonObject.getDouble("value");
-            Pair<Status, Double> erfolg = pandaServer.getDataStorage().getValueData().addValue(key, member, value);
-            return createTotalObject(questid, erfolg);
-        }else if(channel == PandaClientChannel.INFOVALUES){
-            Pair<Status, MemberValueDataStorage.ValueMembersInfo> pair = pandaServer.getDataStorage().getValuesInfo(key, jsonObject.has("km"));
-           return createTotalInfoObject(questid,pair);
-        }
-         */
 
         return null;
     }

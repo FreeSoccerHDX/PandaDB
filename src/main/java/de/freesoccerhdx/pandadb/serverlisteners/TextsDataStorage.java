@@ -10,7 +10,7 @@ import java.util.List;
 
 public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
 
-    private ServerDataStorage serverDataStorage;
+    private final ServerDataStorage serverDataStorage;
     public TextsDataStorage(ServerDataStorage serverDataStorage){
         this.serverDataStorage = serverDataStorage;
     }
@@ -31,15 +31,7 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
     }
 
     public Pair<Status, List<String>> getKeys() {
-        Status status = Status.NO_KEYS_AVAILABLE;
-        List<String> stringList = null;
-
-        if(this.size() > 0){
-            stringList = new ArrayList<>(this.keySet());
-            status = Status.SUCCESSFUL;
-        }
-
-        return Pair.of(status,stringList);
+        return size() == 0 ? new Pair<>(Status.NO_KEYS_AVAILABLE, null) : new Pair<>(Status.SUCCESSFUL, new ArrayList<>(keySet()));
     }
 
     public Pair<Status,List<String>> getMemberKeys(String key) {

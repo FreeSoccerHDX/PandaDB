@@ -11,7 +11,7 @@ import java.util.List;
 
 public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<Object>>> {
 
-    private ServerDataStorage serverDataStorage;
+    private final ServerDataStorage serverDataStorage;
     public ListTypeDataStorage(ServerDataStorage serverDataStorage) {
         this.serverDataStorage = serverDataStorage;
     }
@@ -29,12 +29,10 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
         if(typeData != null){
             objectList = typeData.get(key);
             if(objectList == null){
-                status = Status.LISTKEY_NOT_FOUND;
+                status = Status.KEY_NOT_FOUND;
             }else{
                 status = Status.SUCCESSFUL;
             }
-        }else{
-            status = Status.KEY_NOT_FOUND;
         }
 
 
@@ -49,11 +47,7 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
     public Status addListEntry(String key, ListType listType, Object value) {
         Status status = Status.SUCCESSFUL_ADD_ENTRY;
 
-        HashMap<String, List<Object>> typeData = this.get(listType);
-        if (typeData == null) {
-            typeData = new HashMap<>();
-            this.put(listType, typeData);
-        }
+        HashMap<String, List<Object>> typeData = this.computeIfAbsent(listType, k -> new HashMap<>());
         List<Object> listkeydata = typeData.get(key);
         if(listkeydata == null){
             listkeydata = new ArrayList<>();
@@ -106,33 +100,6 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
         return Pair.of(status, obj);
     }
 
-    /**
-     * Removes the specific Key for an ListKey
-     *
-     * @return Status(LISTTYPE_NOT_FOUND/SUCCESSFUL_REMOVED_KEY/LISTKEY_NOT_FOUND)
-     * */
-    public Status removeList(String key, ListType listType) {
-        Status status = Status.LISTTYPE_NOT_FOUND;
-        HashMap<String, List<Object>> typeData = this.get(listType);
-
-        if(typeData != null){
-            boolean erfolg = typeData.remove(key) != null;
-
-            if(typeData.size() == 0){
-                this.remove(listType);
-            }
-
-            if(erfolg){
-                status = Status.SUCCESSFUL_REMOVED_KEY;
-                serverDataStorage.needSave();
-            }else{
-                status = Status.LISTKEY_NOT_FOUND;
-            }
-        }
-
-
-        return status;
-    }
 
     /**
      * Gets a List of all Keys for a specific ListType

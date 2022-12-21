@@ -11,7 +11,7 @@ import java.util.List;
 
 public class ListListener {
 
-    private PandaServer pandaServer;
+    private final PandaServer pandaServer;
 
     public ListListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
@@ -56,22 +56,10 @@ public class ListListener {
             System.out.println("[PandaServer] Unknown Channel for ListListener: " + channel + " data="+jsonObject);
         }
 
-
-        /*
-        if(channel == PandaClientChannel.GETLIST) {
-            Pair<Status, List<Object>> pair = pandaServer.getDataStorage().getList(key, listkey, listType);
-            return createTotalObject(questid, pair);
-        }else if(channel == PandaClientChannel.ADDLIST) {
-            Object value = jsonObject.get("value");
-            Status status = pandaServer.getDataStorage().addListEntry(key, listkey, listType, value);
-            return createTotalObject(questid, status);
-        }
-         */
-
         return null;
     }
 
-    private <T> JSONObject createTotalObject(String questid, Object info){
+    private JSONObject createTotalObject(String questid, Object info){
         if(questid != null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("id", questid);

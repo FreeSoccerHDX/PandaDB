@@ -10,7 +10,6 @@ import de.freesoccerhdx.simplesocket.client.SimpleSocketClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,9 +18,9 @@ import java.util.Map;
 public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
-    protected HashMap<DataResult.Result, Object> extraListenerInfo = new HashMap<>();
-    protected HashMap<String, DataResult.Result> futureListener = new HashMap<>();
-    private PipelineSupplier mainPipelineSupplier;
+    protected final HashMap<DataResult.Result, Object> extraListenerInfo = new HashMap<>();
+    protected final HashMap<String, DataResult.Result> futureListener = new HashMap<>();
+    private final PipelineSupplier mainPipelineSupplier;
 
 
     public PandaClient(String name, String ip, int port){
@@ -108,11 +107,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                     }
 
                 }else if(listener instanceof DataResult.ListTypeValueResult result){
-                    if(info == null){
-                        result.result(null,status);
-                    }else{
-                        result.result(info,status);
-                    }
+                    result.result(info,status);
                 }else if (listener instanceof DataResult.SpecificResult result) {
                     ClientCommands.SerializerFactory factory = (ClientCommands.SerializerFactory) extraListenerInfo.get(result);
 
@@ -130,8 +125,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                     HashMap<String,PandaDataSerializer> data = null;
                     if(info != null){
                         data = new HashMap<>();
-                        Map infoData = ((JSONObject) info).toMap();
-                        Map<String, String> extractedData = infoData;
+                        Map<String, String> extractedData = (Map) ((JSONObject) info).toMap();
 
                         for(String key : extractedData.keySet()){
                             try {
@@ -188,8 +182,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                     }
                 }else if (listener instanceof DataResult.ListTypeResult result) {
                     if(info != null){
-                        if(info instanceof JSONArray){
-                            JSONArray jsonArray = (JSONArray) info;
+                        if(info instanceof JSONArray jsonArray){
                             ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
                             ArrayList<ListType> listTypes = new ArrayList<>();
                             for(Object object : arrayList){
@@ -204,8 +197,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                     }
                 }else if (listener instanceof DataResult.ListResult result) {
                     if(info != null){
-                        if(info instanceof JSONArray){
-                            JSONArray jsonArray = (JSONArray) info;
+                        if(info instanceof JSONArray jsonArray){
                             ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
                             result.resultList(arrayList, status);
                         }
@@ -223,8 +215,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
                 }else if (listener instanceof DataResult.KeysResult result) {
                     if(info != null){
-                        if(info instanceof JSONArray){
-                            JSONArray jsonArray = (JSONArray) info;
+                        if(info instanceof JSONArray jsonArray){
                             ArrayList arrayList = (ArrayList) jsonArray.toList();
 
                             result.resultList(arrayList, status);
@@ -407,7 +398,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
     @Override
-    public void addList(ListType listType, String key, Object value, DataResult.StatusResult statusResult) {
+    public <T> void addList(ListType<T> listType, String key, T value, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.addList(listType, key, value, statusResult);
         this.mainPipelineSupplier.sync();
     }

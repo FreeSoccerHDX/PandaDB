@@ -4,7 +4,7 @@ import org.json.JSONObject;
 
 public class DatabaseReader {
 
-    private JSONObject jsonObject;
+    private final JSONObject jsonObject;
     public DatabaseReader(JSONObject jsonObject){
         this.jsonObject = jsonObject;
     }

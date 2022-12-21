@@ -10,7 +10,7 @@ import java.util.List;
 
 public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     
-    private ServerDataStorage serverDataStorage;
+    private final ServerDataStorage serverDataStorage;
     public ValueDataStorage(ServerDataStorage serverDataStorage){
         this.serverDataStorage = serverDataStorage;
     }
@@ -48,7 +48,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     public Pair<Status,Double> addValue(String key, String member, double value) {
         MemberValueDataStorage keymap = this.get(key);
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
-        Double newvalue = null;
+        Double newvalue;
 
         if(keymap == null){
             keymap = new MemberValueDataStorage();
@@ -90,9 +90,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
 
         if(valueMemberKeys != null){
             stringList = new ArrayList<>(valueMemberKeys.keySet());
-            if(stringList != null){
-                status = Status.SUCCESSFUL;
-            }
+            status = Status.SUCCESSFUL;
         }
 
         return Pair.of(status,stringList);

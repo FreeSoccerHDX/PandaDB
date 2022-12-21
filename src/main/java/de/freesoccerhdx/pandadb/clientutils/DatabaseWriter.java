@@ -4,7 +4,7 @@ import org.json.JSONObject;
 
 public class DatabaseWriter {
 
-    private JSONObject jsonObject;
+    private final JSONObject jsonObject;
 
     public DatabaseWriter(){
         this.jsonObject = new JSONObject();

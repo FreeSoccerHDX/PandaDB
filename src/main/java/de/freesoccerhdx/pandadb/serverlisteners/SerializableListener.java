@@ -11,7 +11,7 @@ import java.util.List;
 
 public class SerializableListener {
 
-    private PandaServer pandaServer;
+    private final PandaServer pandaServer;
 
     public SerializableListener(PandaServer pandaServer) {
         this.pandaServer = pandaServer;
@@ -50,17 +50,6 @@ public class SerializableListener {
         }else {
             System.out.println("[PandaServer] Unknown Channel for TextListener: " + channel + " data="+jsonObject);
         }
-
-        /*
-        if(channel == PandaClientChannel.GET_STORED_SERIALIZABLE) {
-            Pair<Status, String> value = pandaServer.getDataStorage().getStoredSerializable(key, member);
-            return createTotalObject(questid, value);
-
-        }else if(channel == PandaClientChannel.STORE_SERIALIZABLE) {
-            String value = jsonObject.getString("pds");
-            Status erfolg = pandaServer.getDataStorage().storeSerializable(key, member, value);
-            return createTotalObject(questid, Pair.of(erfolg,null));
-        }*/
 
         return null;
     }

@@ -15,11 +15,11 @@ import java.util.UUID;
 public class PipelineSupplier implements ClientCommands {
     
     
-    private PandaClient pandaClient;
-    private HashMap<String, DataResult.Result> waitingFutureListener = new HashMap<>();
-    private List<Pair<PandaClientChannel, JSONObject>> waitingCalls = new ArrayList<>();
+    private final PandaClient pandaClient;
+    private final HashMap<String, DataResult.Result> waitingFutureListener = new HashMap<>();
+    private final List<Pair<PandaClientChannel, JSONObject>> waitingCalls = new ArrayList<>();
     private String currentUUID;
-    private HashMap<DataResult.Result,Object> extraStuff = new HashMap<>();
+    private final HashMap<DataResult.Result,Object> extraStuff = new HashMap<>();
 
     protected PipelineSupplier(PandaClient pandaClient){
         this.pandaClient = pandaClient;
@@ -318,7 +318,7 @@ public class PipelineSupplier implements ClientCommands {
 
 
     @Override
-    public void addList(ListType listType, String key, Object value, DataResult.StatusResult statusResult) {
+    public <T> void addList(ListType<T> listType, String key, T value, DataResult.StatusResult statusResult) {
         if(notnull(listType, key, value)) {
             if (validateListType(listType, value)) {
                 JSONObject jsonObject = prepareValuePacket(key, null, statusResult);
@@ -428,7 +428,7 @@ public class PipelineSupplier implements ClientCommands {
         return true;
     }
 
-    private <T> boolean validateListType(ListType listType, T value) {
+    private <T> boolean validateListType(ListType<T> listType, T value) {
         if(listType != null && value != null){
             return listType.check(value);
         }

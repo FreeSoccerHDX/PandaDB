@@ -15,10 +15,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class BlockingPipelineSupplier {
 
-    private HashMap<Integer, Object> results = new HashMap<>();
-    private AtomicInteger reusltId = new AtomicInteger(0);
-    private PandaClient client;
-    private PipelineSupplier pipelineSupplier;
+    private final HashMap<Integer, Object> results = new HashMap<>();
+    private final AtomicInteger reusltId = new AtomicInteger(0);
+    private final PandaClient client;
+    private final PipelineSupplier pipelineSupplier;
 
     public BlockingPipelineSupplier(PandaClient pandaClient) {
         this.client = pandaClient;
@@ -341,10 +341,10 @@ public class BlockingPipelineSupplier {
 
     public <T> Pair<Status, HashMap<String, T>> getSerializableKeyData(String key, ClientCommands.SerializerFactory<T> factory, long maxMillis) {
         int id = getID();
-        DataResult.ListStoredSerializableResult<T> dataresult = new DataResult.ListStoredSerializableResult<T>() {
+        DataResult.ListStoredSerializableResult<T> dataresult = new DataResult.ListStoredSerializableResult<>() {
             @Override
             public void result(HashMap<String, T> object, Status status) {
-                results.put(id, Pair.of(status,object));
+                results.put(id, Pair.of(status, object));
             }
 
         };
@@ -393,7 +393,7 @@ public class BlockingPipelineSupplier {
 
 
 
-    public Status addList(ListType listType, String key, Object value, long maxMillis) {
+    public <T> Status addList(ListType<T> listType, String key, T value, long maxMillis) {
         int id = getID();
         DataResult.StatusResult dataresult = new DataResult.StatusResult() {
             @Override

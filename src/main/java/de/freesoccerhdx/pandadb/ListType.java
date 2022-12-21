@@ -11,7 +11,7 @@ public abstract class ListType<T> {
 
     public static final ArrayList<ListType> VALUES = new ArrayList<>();
     public static ListType[] values(){
-        return VALUES.toArray(new ListType[VALUES.size()]);
+        return VALUES.toArray(new ListType[0]);
     }
 
     public static final ListType STRING = new ListType(String.class){
@@ -34,8 +34,7 @@ public abstract class ListType<T> {
     public static final ListType STRING_ARRAY = new ListType(String[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     dos.writeUTF((String) listobj);
@@ -61,8 +60,7 @@ public abstract class ListType<T> {
         @Override
         public String[] parse(String obj) {
             if(obj.length() >= 2) {
-                String[] dat = obj.substring(1, obj.length() - 1).split(",");
-                return dat;
+                return obj.substring(1, obj.length() - 1).split(",");
             }
 
             return null;
@@ -95,8 +93,7 @@ public abstract class ListType<T> {
     public static final ListType BOOLEAN_ARRAY = new ListType(Boolean[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     dos.writeBoolean((Boolean) listobj);
@@ -154,8 +151,7 @@ public abstract class ListType<T> {
     public static final ListType INTEGER_ARRAY = new ListType(Integer[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     dos.writeInt((Integer) listobj);
@@ -197,8 +193,8 @@ public abstract class ListType<T> {
     public static final ListType BYTE = new ListType(Byte.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof Integer integer){
-                dos.writeByte(integer.byteValue());
+            if(obj instanceof Number number){
+                dos.writeByte(number.byteValue());
             }else {
                 dos.writeByte((Byte) obj);
             }
@@ -218,8 +214,7 @@ public abstract class ListType<T> {
     public static final ListType BYTE_ARRAY = new ListType(Byte[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     BYTE.write(dos, listobj);
@@ -280,8 +275,7 @@ public abstract class ListType<T> {
     public static final ListType DOUBLE_ARRAY = new ListType(Double[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     DOUBLE.write(dos, listobj);
@@ -343,8 +337,7 @@ public abstract class ListType<T> {
     public static final ListType LONG_ARRAY = new ListType(Long[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
-            if(obj instanceof JSONArray){
-                JSONArray jsonArray = (JSONArray) obj;
+            if(obj instanceof JSONArray jsonArray){
                 dos.writeInt(jsonArray.length());
                 for(Object listobj : jsonArray.toList()){
                     LONG.write(dos, listobj);
@@ -383,9 +376,9 @@ public abstract class ListType<T> {
 
 
 
-    private Class type;
-    private int ordinal;
-    private <T> ListType(Class<T> typeclass) {
+    private final Class<T> type;
+    private final int ordinal;
+    private ListType(Class<T> typeclass) {
         this.type = typeclass;
         VALUES.add(this);
         ordinal = VALUES.size() - 1;
@@ -395,10 +388,10 @@ public abstract class ListType<T> {
         return ordinal;
     }
 
-    public <T> boolean check(T tocheck){
+    public boolean check(T tocheck){
         return tocheck != null && tocheck.getClass().equals(type);
     }
-    public abstract <T> T parse(String obj);
+    public abstract T parse(String obj);
     public abstract void write(DataOutputStream dos, Object obj) throws IOException;
     public abstract Object read(DataInputStream dis) throws IOException;
 
@@ -415,34 +408,33 @@ public abstract class ListType<T> {
     }
 
     public String asString(Object obj) {
-        String result = "";
-        if(obj instanceof JSONArray){
-            JSONArray jsonArray = (JSONArray) obj;
+        StringBuilder result;
+        if(obj instanceof JSONArray jsonArray){
             int c = 0;
-            result = "[";
+            result = new StringBuilder("[");
             for(Object listobj : jsonArray.toList()){
-                result += listobj;
+                result.append(listobj);
                 if(c != jsonArray.length()-1){
-                    result +=",";
+                    result.append(",");
                 }
                 c++;
             }
-            result += "]";
+            result.append("]");
         }else if(obj.getClass().isArray()){
             Object[] array = (Object[]) obj;
             int c = 0;
-            result = "[";
+            result = new StringBuilder("[");
             for (Object l : array) {
-                result += l;
+                result.append(l);
                 if(c != array.length-1){
-                    result +=",";
+                    result.append(",");
                 }
                 c++;
             }
-            result += "]";
+            result.append("]");
         }else{
-            result = String.valueOf(obj);
+            result = new StringBuilder(String.valueOf(obj));
         }
-        return result;
+        return result.toString();
     }
 }
