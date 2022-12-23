@@ -7,6 +7,8 @@ import de.freesoccerhdx.simplesocket.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     
@@ -18,12 +20,11 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     /**
      * Sets the value for the specific key and member
      *
-     * @return Pair of Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW) and new value
+     * @return Pair of Status(SUCCESSFUL_OVERWRITE_OLD/SUCCESSFUL_CREATED_NEW) and old value
      * */
     public Pair<Status,Double> setValue(String key, String member, double value) {
 
         MemberValueDataStorage keymap = this.get(key);
-        Double newvalue = value;
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
 
         if(keymap == null){
@@ -34,10 +35,10 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
 
-        keymap.put(member, value);
+        Double oldvalue = keymap.put(member, value);
         this.serverDataStorage.needSave();
 
-        return Pair.of(status, newvalue);
+        return Pair.of(status, oldvalue);
     }
 
     /**
@@ -48,7 +49,6 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     public Pair<Status,Double> addValue(String key, String member, double value) {
         MemberValueDataStorage keymap = this.get(key);
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
-        Double newvalue;
 
         if(keymap == null){
             keymap = new MemberValueDataStorage();
@@ -59,7 +59,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
         if(prevalue == null){
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
-        newvalue = value + ((prevalue == null) ? 0 : prevalue);
+        Double newvalue = value + ((prevalue == null) ? 0 : prevalue);
         keymap.put(member, newvalue);
 
         this.serverDataStorage.needSave();
@@ -192,5 +192,64 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
 
         return Pair.of(status,valueMembersInfo);
     }
-    
+
+    public Pair<Status, Pair<String, Double>[]> getLowestTop(String key, int maxMember) {
+        HashMap<String, Double> memberMap = this.get(key);
+        if(memberMap == null) {
+            return Pair.of(Status.KEY_NOT_FOUND, null);
+        }
+        memberMap = (HashMap<String, Double>) memberMap.clone();
+        Pair<String,Double>[] members = new Pair[maxMember < 0 ? memberMap.size() : maxMember];
+        // Sort the memberMap by value and start with the lowest
+        ArrayList<String> usedMembers = new ArrayList<>();
+
+        for(int i = 0; i < members.length; i++) {
+            double lowest = Double.MAX_VALUE;
+            String lowestMember = null;
+            for(Map.Entry<String, Double> entry : memberMap.entrySet()) {
+                if(entry.getValue() < lowest && !usedMembers.contains(entry.getKey())) {
+                    lowest = entry.getValue();
+                    lowestMember = entry.getKey();
+                }
+            }
+            if(lowestMember == null) {
+                break;
+            }
+            members[i] = Pair.of(lowestMember, lowest);
+            usedMembers.add(lowestMember);
+        }
+
+
+        return Pair.of(Status.SUCCESSFUL, members);
+    }
+
+    public Pair<Status, Pair<String, Double>[]> getHighestTop(String key, int maxMember) {
+        HashMap<String, Double> memberMap = this.get(key);
+        if(memberMap == null) {
+            return Pair.of(Status.KEY_NOT_FOUND, null);
+        }
+        memberMap = (HashMap<String, Double>) memberMap.clone();
+        Pair<String,Double>[] members = new Pair[maxMember < 0 ? memberMap.size() : maxMember];
+        // Sort the memberMap by value and start with the lowest
+        ArrayList<String> usedMembers = new ArrayList<>();
+
+        for(int i = 0; i < members.length; i++) {
+            double lowest = Double.MIN_VALUE;
+            String lowestMember = null;
+            for(Map.Entry<String, Double> entry : memberMap.entrySet()) {
+                if(entry.getValue() > lowest && !usedMembers.contains(entry.getKey())) {
+                    lowest = entry.getValue();
+                    lowestMember = entry.getKey();
+                }
+            }
+            if(lowestMember == null) {
+                break;
+            }
+            members[i] = Pair.of(lowestMember, lowest);
+            usedMembers.add(lowestMember);
+        }
+
+
+        return Pair.of(Status.SUCCESSFUL, members);
+    }
 }

@@ -13,4 +13,9 @@ public class Triple<T, T1, T2> extends Pair<T,T1> {
     public T2 getThird() {
         return third;
     }
+
+    public static <T,T1,T2> Triple<T,T1,T2> of(T first, T1 second, T2 third){
+        return new Triple<>(first, second, third);
+    }
+
 }

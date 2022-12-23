@@ -5,6 +5,9 @@ import de.freesoccerhdx.pandadb.clientutils.DatabaseReader;
 import de.freesoccerhdx.pandadb.clientutils.DatabaseWriter;
 import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
+import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeReason;
+import de.freesoccerhdx.pandadb.clientutils.changelistener.TextChangeListener;
+import de.freesoccerhdx.pandadb.clientutils.changelistener.ValueChangeListener;
 import de.freesoccerhdx.pandadb.serverlisteners.ListListener;
 import de.freesoccerhdx.pandadb.serverlisteners.SerializableListener;
 import de.freesoccerhdx.pandadb.serverlisteners.SimpleListener;
@@ -13,13 +16,17 @@ import de.freesoccerhdx.pandadb.serverlisteners.ValueListener;
 import de.freesoccerhdx.simplesocket.server.ServerClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 public class PandaServer {
 
@@ -55,21 +62,51 @@ public class PandaServer {
             }
         });
 
+        simpleSocketServer.setServerListener("changelistener", new ServerListener() {
+            private HashMap<UUID, String> listeners = new HashMap<>();
+            @Override
+            public void recive(SimpleSocketServer simpleSocketServer, ServerClientSocket clientSocket, String channel, String msg) {
+                JSONObject json = new JSONObject(msg);
+                UUID uuid = UUID.fromString(json.getString("uuid"));
+                String type = json.getString("type");
+
+                if(type.equals("text")) {
+                    listeners.put(uuid, type);
+                    textListener.addChangeListener(uuid, clientSocket.getClientName(), json.getString("key"), json.getString("member"));
+                }else if(type.equals("remove")) {
+                    String toRem = listeners.get(uuid);
+                    if(toRem.equals("text")) {
+                        textListener.removeChangeListener(uuid);
+                    }else if(toRem.equals("value")) {
+                        valueListener.removeChangeListener(uuid);
+                    }
+                }else if(type.equals("value")) {
+                    listeners.put(uuid,type);
+                    valueListener.addChangeListener(uuid, clientSocket.getClientName(), json.getString("key"), json.getString("member"));
+                }else {
+                    System.err.println("Unknown 'changelistener'-type: " + type);
+                }
+
+            }
+        });
+
         simpleSocketServer.setServerListener("dbpipeline", new ServerListener() {
             @Override
             public void recive(SimpleSocketServer simpleSocketServer, ServerClientSocket clientSocket, String __channel, String msg) {
                 Thread responseThread = new Thread(() -> {
                     JSONObject jsonObject = new JSONObject(msg);
-                    int size = jsonObject.getInt("size");
+                    JSONArray jsonArray = jsonObject.getJSONArray("data");
                     String uuid = jsonObject.getString("uuid");
 
                     JSONObject result = new JSONObject();
-                    result.put("size", size);
                     result.put("uuid", uuid);
-                    for(int i = 0; i < size; i++){
-                        int channelid = jsonObject.getInt("c"+i);
+                    JSONArray resultArray = new JSONArray();
+                    jsonArray.forEach(o -> {
+                        JSONObject object = (JSONObject) o;
+
+                        int channelid = object.getInt("c");
                         PandaClientChannel channel = PandaClientChannel.values()[channelid];
-                        JSONObject data = jsonObject.getJSONObject("d"+i);
+                        JSONObject data = object.getJSONObject("d");
 
                         JSONObject resultData = null;
                         if(channel.isText()) {
@@ -87,10 +124,12 @@ public class PandaServer {
                         }
 
                         if(resultData != null){
-                            result.put("r"+i, resultData);
+                            resultArray.put(resultData);
+                        }else{
+                            resultArray.put("");
                         }
-
-                    }
+                    });
+                    result.put("data", resultArray);
 
                     clientSocket.sendNewMessage("dbpiperesult",result,null);
                 });
@@ -164,6 +203,71 @@ public class PandaServer {
                     getDataStorage().generateDataTree();
                     System.out.println("Data-Tree created");
 
+                } else if(name.equalsIgnoreCase("test:change")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn){
+
+                            client.getChangeListenerHandler().addTextListener("key", "member", new TextChangeListener() {
+                                @Override
+                                public void onChange(ChangeReason changeReason, String oldvalue, String newvalue) {
+                                //    System.out.println("Text-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
+                                }
+                            });
+                            client.getChangeListenerHandler().addValueListener("key", "member", new ValueChangeListener() {
+                                @Override
+                                public void onChange(ChangeReason changeReason, Double oldvalue, Double newvalue) {
+                                    System.out.println("Value-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
+                                }
+                            });
+
+                            PipelineSupplier pipe = client.createPipelineSupplier();
+/*
+                            pipe.setText("key", "member", "firstVal", (old,status) -> System.out.println("setText0: " + status + " | old=" + old));
+                            pipe.setText("key", "member", "secondVal", (old,status) -> System.out.println("setText1: " + status + " | old=" + old));
+                            pipe.removeTextMember("key", "member", (oldvalue,status) -> System.out.println("removeTextMember: " + status + " -> " + oldvalue));
+                            pipe.setText("key", "member", "firstVal", (old,status) -> System.out.println("setText0: " + status + " | old=" + old));
+                            pipe.setText("key", "member", "secondVal", (old,status) -> System.out.println("setText1: " + status + " | old=" + old));
+                            pipe.removeTextKey("key", status -> System.out.println("removeTextKey: " + status));
+  */
+                            pipe.setValue("key", "member", 123.0, (newv,status) -> System.out.println("setValue0: " + status + " | old=" + newv));
+                            pipe.setValue("key", "member", 321.0, (newv,status) -> System.out.println("setValue1: " + status + " | old=" + newv));
+                            pipe.addValue("key", "member", -200.0, (newv,status) -> System.out.println("addValue: " + status + " | old=" + newv));
+                            pipe.removeValueMember("key", "member", (old,status) -> System.out.println("removeValueMember: " + status + " | old=" + old));
+                            pipe.setValue("key", "member", 123.0, (newv,status) -> System.out.println("setValue0: " + status + " | old=" + newv));
+                            pipe.removeValueKey("key", status -> System.out.println("removeValueKey: " + status));
+
+                            pipe.sync();
+
+                        }
+                    });
+
+                    killTestClient(client);
+                } else if(name.equalsIgnoreCase("test:sort")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn){
+                            long nanos = System.nanoTime();
+                            PipelineSupplier pipe = client.createPipelineSupplier();
+                            for(int i = 0; i < 1000; i++) {
+                                pipe.addValue("key", "mem0"+i, 111+i, (oldvalue, status) -> System.out.println("mem0: " + oldvalue + " -> " + status));
+                                pipe.addValue("key", "mem1"+i, 222+i, (oldvalue, status) -> System.out.println("mem1: " + oldvalue + " -> " + status));
+                                pipe.addValue("key", "mem2"+i, 333+i, (oldvalue, status) -> System.out.println("mem2: " + oldvalue + " -> " + status));
+                                pipe.addValue("key", "mem3"+i, 444+i, (oldvalue, status) -> System.out.println("mem3: " + oldvalue + " -> " + status));
+                                pipe.addValue("key", "mem4"+i, -555+i, (oldvalue, status) -> System.out.println("mem4: " + oldvalue + " -> " + status));
+                            }
+
+                            pipe.getValueHighestTop("key", 5, (pair, status) -> System.out.println("HighestTop: " + Arrays.toString(pair) + " -> " + status));
+                            pipe.getValueLowestTop("key", 5, (pair, status) -> System.out.println("LowestTop: " + Arrays.toString(pair) + " -> " + status));
+                            pipe.getValueInfo("key", false, (info, status) -> System.out.println("Info: " + info + " -> " + status));
+                            pipe.removeValueKey("key", status -> System.out.println("Remove: " + status + " \nTotalTime: " + ((System.nanoTime()-nanos)*1.0)/1000000.0 + "ms"));
+
+                            pipe.sync();
+
+                        }
+                    });
+
+                    killTestClient(client);
                 } else if(name.equalsIgnoreCase("test:simple")) {
                     PandaClient client = new PandaClient("database_test_min","localhost",port);
                     client.setOnLogin(loggedIn -> {
@@ -309,7 +413,7 @@ public class PandaServer {
                     client.setOnLogin(loggedIn -> {
                         if(loggedIn){
                             PipelineSupplier pipe = client.createPipelineSupplier();
-                            pipe.setText("key", "member", "Hello World!", status -> System.out.println("setText: " + status));
+                            pipe.setText("key", "member", "Hello World!", (old,status) -> System.out.println("setText: " + status));
                             pipe.getTextKeys((keys,status) -> System.out.println("getTextKeys: " +status + " -> "+ keys));
                             pipe.getTextMemberKeys("key", (keys,status) -> System.out.println("getTextMemberKeys: " +status + " -> "+ keys));
                             pipe.getTextMemberData("key", "member", (data,status) -> System.out.println("getTextMemberData: " +status + " -> "+ data));

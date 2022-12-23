@@ -27,6 +27,8 @@ public enum PandaClientChannel {
     VALUE_REMOVE_KEY, // -> remove key with all members
     VALUE_REMOVE_MEMBER, // -> remove member from key with its Value
     VALUE_GET_VALUE_INFO, // -> return ValueInfo for key
+    VALUE_GET_LOWEST_TOP, //
+    VALUE_GET_HIGHEST_TOP, //
 
     LISTDATA_ADD_LIST_ENTRY, // -> add Data for key in ListType
     LISTDATA_REMOVE_LISTTYPE, // -> remove specific ListType

@@ -1,6 +1,7 @@
 package de.freesoccerhdx.pandadb;
 
 import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.simplesocket.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +24,10 @@ public class DataResult {
 
     public interface ListStoredSerializableResult<T> extends Result {
         void result(HashMap<String, T> object, Status status);
+    }
+
+    public interface SortedValueMemberDataResult extends Result {
+        void result(Pair<String, Double>[] sorted, Status status);
     }
 
     public interface ValueMemberDataResult extends Result {

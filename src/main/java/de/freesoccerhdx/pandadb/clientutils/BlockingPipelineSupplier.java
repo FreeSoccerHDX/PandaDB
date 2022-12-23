@@ -42,18 +42,18 @@ public class BlockingPipelineSupplier {
         return results.remove(id);
     }
 
-    public Status setText(String key, String member, String value, long maxMillis) {
+    public Pair<Status,String> setText(String key, String member, String value, long maxMillis) {
         int id = getID();
-        DataResult.StatusResult dataresult = new DataResult.StatusResult() {
+        DataResult.TextResult dataresult = new DataResult.TextResult() {
             @Override
-            public void result(Status status) {
-                results.put(id, status);
+            public void result(String data, Status status) {
+                results.put(id, Pair.of(status,data));
             }
         };
         pipelineSupplier.setText(key, member, value, dataresult);
         pipelineSupplier.sync();
         Object result = waitForResult(id, maxMillis);
-        return result == null ? null : (Status) result;
+        return result == null ? null : (Pair<Status, String>) result;
     }
 
     public Pair<Status, List<String>> getTextKeys(long maxMillis) {
@@ -271,6 +271,35 @@ public class BlockingPipelineSupplier {
         return result == null ? null : (Pair<Status, MemberValueDataStorage.ValueMembersInfo>) result;
     }
 
+
+    public Pair<Status,Pair<String,Double>[]> getValueLowestTop(String key, int maxMembers, long maxMillis) {
+        int id = getID();
+        DataResult.SortedValueMemberDataResult sortedValueMemberDataResult = new DataResult.SortedValueMemberDataResult() {
+            @Override
+            public void result(Pair<String, Double>[] sorted, Status status) {
+                results.put(id, Pair.of(status,sorted));
+            }
+        };
+        pipelineSupplier.getValueLowestTop(key, maxMembers, sortedValueMemberDataResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, Pair<String, Double>[]>) result;
+    }
+
+
+    public Pair<Status,Pair<String,Double>[]> getValueHighestTop(String key, int maxMembers, long maxMillis) {
+        int id = getID();
+        DataResult.SortedValueMemberDataResult sortedValueMemberDataResult = new DataResult.SortedValueMemberDataResult() {
+            @Override
+            public void result(Pair<String, Double>[] sorted, Status status) {
+                results.put(id, Pair.of(status,sorted));
+            }
+        };
+        pipelineSupplier.getValueHighestTop(key, maxMembers, sortedValueMemberDataResult);
+        pipelineSupplier.sync();
+        Object result = waitForResult(id, maxMillis);
+        return result == null ? null : (Pair<Status, Pair<String, Double>[]>) result;
+    }
 
 
 

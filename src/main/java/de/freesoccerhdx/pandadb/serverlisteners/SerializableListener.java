@@ -27,7 +27,7 @@ public class SerializableListener {
 
         if(channel == PandaClientChannel.SERIALIZABLE_SET) {
             String value = jsonObject.getString("v");
-            Status status = sds.set(key, member, value);
+            Pair<Status, String> status = sds.set(key, member, value);
             return createTotalObject(questid, status);
         }else if(channel == PandaClientChannel.SERIALIZABLE_GET_KEYS){
             Pair<Status, List<String>> info = sds.getKeys();

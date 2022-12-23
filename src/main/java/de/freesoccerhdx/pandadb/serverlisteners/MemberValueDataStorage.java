@@ -29,7 +29,7 @@ public class MemberValueDataStorage extends HashMap<String, Double>{
         Double highestValue = sortedStream.min((o1, o2) -> o1 > o2 ? 0 : 1).get();
 
         double totalValue = values().stream().mapToDouble(Double::doubleValue).sum();
-        double averageValue = totalValue / (1.0 * Math.min(1,size()));
+        double averageValue = totalValue / (1.0 * Math.max(1,size()));
 
         return new ValueMembersInfo(lowestValue, highestValue, averageValue,size(),withMembers ? new ArrayList<>(keySet()) : null);
     }

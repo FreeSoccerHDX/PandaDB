@@ -9,7 +9,7 @@ public interface ClientCommands {
         T create();
     }
 
-    void setText(String key, String member, String value, DataResult.StatusResult statusResult);
+    void setText(String key, String member, String value, DataResult.TextResult textResult);
     void getTextKeys(DataResult.KeysResult keysResult);
     void getTextMemberKeys(String key, DataResult.KeysResult keysResult);
     void getTextMemberData(String key, String member, DataResult.TextResult textResult);
@@ -36,6 +36,8 @@ public interface ClientCommands {
     void removeValueKey(String key, DataResult.StatusResult statusResult);
     void removeValueMember(String key, String member, DataResult.ValueResult valueResult);
     void getValueInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult);
+    void getValueLowestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult);
+    void getValueHighestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult);
 
 
 

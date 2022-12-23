@@ -15,7 +15,7 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
         this.serverDataStorage = serverDataStorage;
     }
 
-    public Status set(String key, String member, String value) {
+    public Pair<Status,String> set(String key, String member, String value) {
         HashMap<String, String> keymap = this.get(key);
         Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
         if (keymap == null) {
@@ -25,9 +25,9 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
         if(!keymap.containsKey(member)){
             status = Status.SUCCESSFUL_CREATED_NEW;
         }
-        keymap.put(member, value);
+        String old = keymap.put(member, value);
         serverDataStorage.needSave();
-        return status;
+        return Pair.of(status, old);
     }
 
     public Pair<Status, List<String>> getKeys() {

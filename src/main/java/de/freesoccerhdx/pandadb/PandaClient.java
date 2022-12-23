@@ -1,10 +1,12 @@
 package de.freesoccerhdx.pandadb;
 
 import de.freesoccerhdx.pandadb.clientutils.BlockingPipelineSupplier;
+import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeListenerHandler;
 import de.freesoccerhdx.pandadb.clientutils.ClientCommands;
 import de.freesoccerhdx.pandadb.clientutils.DatabaseReader;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.simplesocket.Pair;
 import de.freesoccerhdx.simplesocket.client.ClientListener;
 import de.freesoccerhdx.simplesocket.client.SimpleSocketClient;
 import org.json.JSONArray;
@@ -21,12 +23,14 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
     protected final HashMap<DataResult.Result, Object> extraListenerInfo = new HashMap<>();
     protected final HashMap<String, DataResult.Result> futureListener = new HashMap<>();
     private final PipelineSupplier mainPipelineSupplier;
+    private final ChangeListenerHandler changeListener;
 
 
     public PandaClient(String name, String ip, int port){
         super(name, ip, port);
 
         mainPipelineSupplier = new PipelineSupplier(this);
+        changeListener = new ChangeListenerHandler(this);
 
         setSocketListener("dbpiperesult", new ClientListener() {
             @Override
@@ -34,24 +38,26 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                 //System.err.println("Pandaclient got msg: " + message);
                 try {
                     JSONObject jsonObject = new JSONObject(message);
-                    int size = jsonObject.getInt("size");
                     String uuid = jsonObject.getString("uuid");
+                    JSONArray array = jsonObject.getJSONArray("data");
 
-                    for (int i = 0; i < size; i++) {
-                        if (jsonObject.has("r" + i)) {
-                            JSONObject resultData = jsonObject.getJSONObject("r" + i);
+                    array.forEach(o -> {
+                        if(o instanceof JSONObject resultData) {
                             String id = resultData.getString("id");
                             int statusID = resultData.getInt("s");
                             Object info = resultData.has("i") ? resultData.get("i") : null;
                             handleResult(uuid + id, Status.values()[statusID], info);
-                            //System.out.println("ResultData=" + resultData);
                         }
-                    }
+                    });
                 }catch (Exception e){
                     e.printStackTrace();
                 }
             }
         });
+    }
+
+    public ChangeListenerHandler getChangeListenerHandler() {
+        return changeListener;
     }
 
     public BlockingPipelineSupplier getBlockingPipelineSupplier() {
@@ -80,7 +86,20 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
             //System.out.println("####### " + id + " " + status + " " + info);
             if (listener != null) {
                 //System.out.println("Listener found for id=" + id + " -> " + listener.getClass().getSimpleName());
-                if (listener instanceof DataResult.ValueResult result) {
+                if(listener instanceof DataResult.SortedValueMemberDataResult result) {
+                    if(info == null) {
+                        result.result(null, status);
+                    }else{
+                        JSONArray jsonArray = (JSONArray) info;
+                        Pair<String,Double>[] pairs = new Pair[jsonArray.length()/2];
+                        for(int i = 0; i < jsonArray.length(); i+=2){
+                            pairs[i/2] = new Pair<>(jsonArray.getString(i), jsonArray.getDouble(i+1));
+                        }
+                        result.result(pairs, status);
+                    }
+
+
+                }else if (listener instanceof DataResult.ValueResult result) {
                     if (info == null) {
                         result.result(null, status);
                     } else {
@@ -241,8 +260,8 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
     }
 
     @Override
-    public void setText(String key, String member, String value, DataResult.StatusResult statusResult) {
-        this.mainPipelineSupplier.setText(key, member, value, statusResult);
+    public void setText(String key, String member, String value, DataResult.TextResult textResult) {
+        this.mainPipelineSupplier.setText(key, member, value, textResult);
         this.mainPipelineSupplier.sync();
     }
 
@@ -392,7 +411,17 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
         this.mainPipelineSupplier.sync();
     }
 
+    @Override
+    public void getValueLowestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult) {
+       this.mainPipelineSupplier.getValueLowestTop(key, maxMembers, sortedValueMemberDataResult);
+       this.mainPipelineSupplier.sync();
+    }
 
+    @Override
+    public void getValueHighestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult) {
+        this.mainPipelineSupplier.getValueHighestTop(key, maxMembers, sortedValueMemberDataResult);
+        this.mainPipelineSupplier.sync();
+    }
 
 
 
@@ -450,6 +479,10 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
         this.mainPipelineSupplier.getListSize(listType, key, listSizeResult);
         this.mainPipelineSupplier.sync();
     }
+
+
+
+
 
     @Override
     public void setSimple(String key, String value, DataResult.TextResult textResult) {
