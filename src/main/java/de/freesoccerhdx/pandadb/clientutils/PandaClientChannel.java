@@ -47,6 +47,16 @@ public enum PandaClientChannel {
     SIMPLE_GET_KEYS,
     SIMPLE_GET_DATA,
 
+    BYTEARRAY_CREATE_NEW,
+    BYTEARRAY_SET_INDEX,
+    BYTEARRAY_GET_INDEX,
+    BYTEARRAY_GET_KEY_DATA,
+    BYTEARRAY_GET_KEY_SIZE,
+    BYTEARRAY_GET_KEYS,
+    BYTEARRAY_REMOVE_KEY,
+    BYTEARRAY_CLEAR_KEY,
+    BYTEARRAY_GET_INDEXES,
+
     ;
 
     public boolean isText(){
@@ -69,6 +79,9 @@ public enum PandaClientChannel {
         return this.name().startsWith("SIMPLE_");
     }
 
+    public boolean isByteArray(){
+        return this.name().startsWith("BYTEARRAY_");
+    }
 
 /*
     ADDLIST,

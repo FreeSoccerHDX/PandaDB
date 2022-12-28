@@ -1,50 +1,25 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils;
 
 import de.freesoccerhdx.pandadb.Triple;
 import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeReason;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.ValueDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public class ValueListener {
+public class ValueListener extends DataChannelListener {
 
     private final PandaServer pandaServer;
 
     public ValueListener(PandaServer pandaServer){
         this.pandaServer = pandaServer;
-    }
-
-    private JSONObject createTotalObject(String questid, Pair info){
-        if(questid != null) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("id", questid);
-            jsonObject.put("s", ((Status)info.getFirst()).ordinal());
-            Object value = info.getSecond();
-            if (value != null) {
-                if(value instanceof Pair[]) {
-                    Pair<String, Double>[] pairs = (Pair<String, Double>[]) value;
-                    JSONArray array = new JSONArray();
-                    for (Pair<String, Double> pair : pairs) {
-                        array.put(pair.getFirst());
-                        array.put(pair.getSecond());
-                    }
-                    jsonObject.put("i", array);
-                }else if(value instanceof MemberValueDataStorage) {
-                    jsonObject.put("i", ((HashMap<String,Double>) value));
-                }else {
-                    jsonObject.put("i", value);
-                }
-            }
-            return jsonObject;
-        }
-        return null;
     }
 
     private JSONObject createTotalInfoObject(String questid, Pair<Status, MemberValueDataStorage.ValueMembersInfo> info){

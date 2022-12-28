@@ -1,15 +1,16 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils;
 
 import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.TextsDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
 
-public class SerializableListener {
+public class SerializableListener extends DataChannelListener {
 
     private final PandaServer pandaServer;
 
@@ -51,23 +52,6 @@ public class SerializableListener {
             System.out.println("[PandaServer] Unknown Channel for TextListener: " + channel + " data="+jsonObject);
         }
 
-        return null;
-    }
-
-    private JSONObject createTotalObject(String questid, Object info){
-        if(questid != null) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("id", questid);
-            if (info != null) {
-                if(info instanceof Status s) {
-                    jsonObject.put("s", s.ordinal());
-                }else if(info instanceof Pair pair) {
-                    jsonObject.put("s", ((Status)pair.getFirst()).ordinal());
-                    jsonObject.put("i", pair.getSecond());
-                }
-            }
-            return jsonObject;
-        }
         return null;
     }
 

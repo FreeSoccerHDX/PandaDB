@@ -1,15 +1,16 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils;
 
 import de.freesoccerhdx.pandadb.ListType;
 import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.ListTypeDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
 import org.json.JSONObject;
 
 import java.util.List;
 
-public class ListListener {
+public class ListListener extends DataChannelListener{
 
     private final PandaServer pandaServer;
 
@@ -56,27 +57,6 @@ public class ListListener {
             System.out.println("[PandaServer] Unknown Channel for ListListener: " + channel + " data="+jsonObject);
         }
 
-        return null;
-    }
-
-    private JSONObject createTotalObject(String questid, Object info){
-        if(questid != null) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("id", questid);
-            if (info != null) {
-                if(info instanceof Status s){
-                    jsonObject.put("s", s.ordinal());
-                }else if(info instanceof Pair p){
-                    //Pair<Status, List<Object>> pair = (Pair<Status, List<Object>>) info;
-                    jsonObject.put("s", ((Status)p.getFirst()).ordinal());
-                    if(p.getSecond() != null) {
-                        jsonObject.put("i", p.getSecond());
-                    }
-                }
-
-            }
-            return jsonObject;
-        }
         return null;
     }
 

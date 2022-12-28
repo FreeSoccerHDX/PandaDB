@@ -2,7 +2,7 @@ package de.freesoccerhdx.pandadb.clientutils;
 
 import de.freesoccerhdx.pandadb.DataResult;
 import de.freesoccerhdx.pandadb.ListType;
-import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
 import de.freesoccerhdx.pandadb.PandaClient;
 import de.freesoccerhdx.pandadb.PipelineSupplier;
 import de.freesoccerhdx.pandadb.Status;
@@ -60,7 +60,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult keysResult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, new Pair<>(status, data));
             }
         };
@@ -74,7 +74,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult keysResult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, new Pair<>(status, data));
             }
         };
@@ -102,7 +102,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.MemberDataResult memberDataResult = new DataResult.MemberDataResult() {
             @Override
-            public void resultData(HashMap<String, String> memberData, Status status) {
+            public void result(HashMap<String, String> memberData, Status status) {
                 results.put(id, new Pair<>(status, memberData));
             }
         };
@@ -177,7 +177,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult dataresult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -191,7 +191,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult dataresult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -330,7 +330,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult dataresult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -344,7 +344,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult dataresult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -436,7 +436,7 @@ public class BlockingPipelineSupplier {
         return result == null ? null : (Status) result;
     }
 
-    public Status removeListtype(ListType listType, long maxMillis) {
+    public Status removeListType(ListType listType, long maxMillis) {
         int id = getID();
         DataResult.StatusResult dataresult = new DataResult.StatusResult() {
             @Override
@@ -444,7 +444,7 @@ public class BlockingPipelineSupplier {
                 results.put(id, status);
             }
         };
-        pipelineSupplier.removeListtype(listType, dataresult);
+        pipelineSupplier.removeListType(listType, dataresult);
         pipelineSupplier.sync();
         Object result = waitForResult(id, maxMillis);
         return result == null ? null : (Status) result;
@@ -482,7 +482,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult dataresult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -496,7 +496,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.ListTypeResult dataresult = new DataResult.ListTypeResult() {
             @Override
-            public void resultList(ArrayList<ListType> list, Status status) {
+            public void result(ArrayList<ListType> list, Status status) {
                 results.put(id, Pair.of(status,list));
             }
         };
@@ -510,7 +510,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.ListResult<T> dataresult = new DataResult.ListResult<T>() {
             @Override
-            public void resultList(ArrayList<T> data, Status status) {
+            public void result(ArrayList<T> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -597,7 +597,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.KeysResult keysResult = new DataResult.KeysResult() {
             @Override
-            public void resultList(ArrayList<String> data, Status status) {
+            public void result(ArrayList<String> data, Status status) {
                 results.put(id, Pair.of(status,data));
             }
         };
@@ -611,7 +611,7 @@ public class BlockingPipelineSupplier {
         int id = getID();
         DataResult.MemberDataResult memberDataResult = new DataResult.MemberDataResult() {
             @Override
-            public void resultData(HashMap<String, String> memberData, Status status) {
+            public void result(HashMap<String, String> memberData, Status status) {
                 results.put(id, Pair.of(status,memberData));
             }
         };

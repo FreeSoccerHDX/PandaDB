@@ -1,5 +1,6 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils.datastorage;
 
+import de.freesoccerhdx.pandadb.ServerDataStorage;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.simplesocket.Pair;
 
@@ -8,8 +9,14 @@ import java.util.HashMap;
 
 public class SimpleDataStorage extends HashMap<String,String> {
 
+    private final ServerDataStorage serverDataStorage;
+    public SimpleDataStorage(ServerDataStorage serverDataStorage){
+        this.serverDataStorage = serverDataStorage;
+    }
+
     public Pair<Status,String> setSimple(String key, String value) {
         String oldvalue = this.put(key, value);
+        serverDataStorage.needSave();
         if(oldvalue != null) {
             return new Pair<>(Status.SUCCESSFUL_OVERWRITE_OLD, oldvalue);
         }
@@ -17,17 +24,20 @@ public class SimpleDataStorage extends HashMap<String,String> {
     }
 
     public Pair<Status,String> getSimple(String key) {
-        return this.containsKey(key) ? Pair.of(Status.SUCCESSFUL, this.get(key)) : Pair.of(Status.KEY_NOT_FOUND, null);
+        return this.containsKey(key) ? Pair.of(Status.SUCCESSFUL_GET_DATA, this.get(key)) : Pair.of(Status.KEY_NOT_FOUND, null);
     }
 
     public Pair<Status,String> removeSimple(String key) {
         String removed = this.remove(key);
-        return removed != null ? Pair.of(Status.SUCCESSFUL, removed) : Pair.of(Status.KEY_NOT_FOUND, null);
+        if(removed != null) {
+            serverDataStorage.needSave();
+        }
+        return removed != null ? Pair.of(Status.SUCCESSFUL_REMOVED_KEY, removed) : Pair.of(Status.KEY_NOT_FOUND, null);
     }
 
     public Pair<Status, ArrayList<String>> getSimpleKeys() {
         if(this.size() > 0) {
-            return Pair.of(Status.SUCCESSFUL, new ArrayList<>(this.keySet()));
+            return Pair.of(Status.SUCCESSFUL_GET_KEYS, new ArrayList<>(this.keySet()));
         }else {
             return Pair.of(Status.NO_KEYS_AVAILABLE, null);
         }
@@ -35,7 +45,7 @@ public class SimpleDataStorage extends HashMap<String,String> {
 
     public Pair<Status, HashMap<String, String>> getSimpleData() {
         if(this.size() > 0) {
-            return (Pair<Status, HashMap<String, String>>) Pair.of(Status.SUCCESSFUL, ((HashMap<String,String>)this.clone()));
+            return (Pair<Status, HashMap<String, String>>) Pair.of(Status.SUCCESSFUL_GET_DATA, ((HashMap<String,String>)this.clone()));
         }else {
             return Pair.of(Status.NO_KEYS_AVAILABLE, null);
         }

@@ -38,7 +38,7 @@ public class ChangeListenerHandler {
                         valueChangeListener.onChange(cr, oldvalue, newvalue);
                     }
                 }else{
-                    System.out.println("Listener not found!\nRemoving from Client and Server...");
+                    //System.out.println("Listener not found!\nRemoving from Client and Server...");
                     send(new JSONObject(), uuid, "remove");
                 }
             }
@@ -52,6 +52,19 @@ public class ChangeListenerHandler {
             return send(new JSONObject(), uuid, "remove") != null;
         }
         return false;
+    }
+
+    public UUID addSimpleListener(String key, TextChangeListener listener) {
+        if(notnull(key, listener)){
+            UUID uuid = UUID.randomUUID();
+            listeners.put(uuid, listener);
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("key", key);
+
+            return send(jsonObject, uuid, "simple");
+        }else {
+            throw new IllegalArgumentException("key or listener is null!");
+        }
     }
 
     public UUID addTextListener(String key, String member, TextChangeListener listener) {

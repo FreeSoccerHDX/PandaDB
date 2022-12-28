@@ -1,4 +1,4 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils.datastorage;
 
 import de.freesoccerhdx.pandadb.ListType;
 import de.freesoccerhdx.pandadb.ServerDataStorage;
@@ -31,7 +31,7 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
             if(objectList == null){
                 status = Status.KEY_NOT_FOUND;
             }else{
-                status = Status.SUCCESSFUL;
+                status = Status.SUCCESSFUL_GET_DATA;
             }
         }
 
@@ -87,10 +87,10 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
                     if (erfolg) {
                         status = Status.SUCCESSFUL_REMOVED_LISTINDEX;
                     } else {
-                        status = Status.LISTINDEX_NOT_FOUND;
+                        status = Status.INDEX_NOT_FOUND;
                     }
                 }else{
-                    status = Status.LISTINDEX_NOT_FOUND;
+                    status = Status.INDEX_NOT_FOUND;
                 }
             }else{
                 status = Status.KEY_NOT_FOUND;
@@ -112,7 +112,7 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
         HashMap<String, List<Object>> listtypeMap = this.get(listType);
         if(listtypeMap != null){
             stringList = new ArrayList<>(listtypeMap.keySet());
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_KEYS;
         }
 
         return Pair.of(status,stringList);
@@ -150,7 +150,7 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
         for(ListType listType : this.keySet()){
             list.add(listType.ordinal());
         }
-        return list.size() == 0 ? Pair.of(Status.NO_KEYS_AVAILABLE, null) : Pair.of(Status.SUCCESSFUL, list);
+        return list.size() == 0 ? Pair.of(Status.NO_KEYS_AVAILABLE, null) : Pair.of(Status.SUCCESSFUL_GET_KEYS, list);
     }
 
     public Pair<Status, Object> getListIndex(ListType listType, String key, int index) {
@@ -169,10 +169,10 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
                     if (erfolg) {
                         status = Status.SUCCESSFUL_GET_LISTINDEX;
                     } else {
-                        status = Status.LISTINDEX_NOT_FOUND;
+                        status = Status.INDEX_NOT_FOUND;
                     }
                 }else{
-                    status = Status.LISTINDEX_NOT_FOUND;
+                    status = Status.INDEX_NOT_FOUND;
                 }
             }else{
                 status = Status.KEY_NOT_FOUND;
@@ -190,7 +190,7 @@ public class ListTypeDataStorage extends HashMap<ListType, HashMap<String, List<
             List<Object> objects = typeData.get(key);
             if(objects != null) {
                 size = objects.size();
-                status = Status.SUCCESSFUL;
+                status = Status.SUCCESSFUL_GET_DATA;
             }else{
                 status = Status.KEY_NOT_FOUND;
             }

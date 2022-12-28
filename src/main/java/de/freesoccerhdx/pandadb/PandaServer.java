@@ -8,17 +8,21 @@ import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeReason;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.TextChangeListener;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.ValueChangeListener;
-import de.freesoccerhdx.pandadb.serverlisteners.ListListener;
-import de.freesoccerhdx.pandadb.serverlisteners.SerializableListener;
-import de.freesoccerhdx.pandadb.serverlisteners.SimpleListener;
-import de.freesoccerhdx.pandadb.serverlisteners.TextListener;
-import de.freesoccerhdx.pandadb.serverlisteners.ValueListener;
+import de.freesoccerhdx.pandadb.serverutils.ByteArrayListener;
+import de.freesoccerhdx.pandadb.serverutils.ListListener;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.SerializableListener;
+import de.freesoccerhdx.pandadb.serverutils.SimpleListener;
+import de.freesoccerhdx.pandadb.serverutils.TextListener;
+import de.freesoccerhdx.pandadb.serverutils.ValueListener;
+import de.freesoccerhdx.simplesocket.Pair;
 import de.freesoccerhdx.simplesocket.server.ServerClientSocket;
 import de.freesoccerhdx.simplesocket.server.ServerListener;
 import de.freesoccerhdx.simplesocket.server.SimpleSocketServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +31,7 @@ import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PandaServer {
 
@@ -38,11 +43,12 @@ public class PandaServer {
     private final ValueListener valueListener;
     private final SerializableListener serializableListener;
     private final SimpleListener simpleListener;
+    private final ByteArrayListener byteArrayListener;
 
     private final int port;
 
-    public PandaServer(int port) throws IOException {
-        dataStorage = new ServerDataStorage();
+    public PandaServer(int port, File databaseFile, File dataTreeFile) throws IOException {
+        dataStorage = new ServerDataStorage(databaseFile, dataTreeFile);
         this.port = port;
         simpleSocketServer = new SimpleSocketServer(port);
 
@@ -52,6 +58,8 @@ public class PandaServer {
         this.valueListener = new ValueListener(this);
         this.serializableListener = new SerializableListener(this);
         this.simpleListener = new SimpleListener(this);
+        this.byteArrayListener = new ByteArrayListener(this);
+
 
         simpleSocketServer.setServerListener("datatree", new ServerListener() {
             @Override
@@ -79,7 +87,12 @@ public class PandaServer {
                         textListener.removeChangeListener(uuid);
                     }else if(toRem.equals("value")) {
                         valueListener.removeChangeListener(uuid);
+                    }else if(toRem.equals("simple")) {
+                        simpleListener.removeChangeListener(uuid);
                     }
+                }else if(type.equals("simple")) {
+                    listeners.put(uuid, type);
+                    simpleListener.addChangeListener(uuid, clientSocket.getClientName(), json.getString("key"));
                 }else if(type.equals("value")) {
                     listeners.put(uuid,type);
                     valueListener.addChangeListener(uuid, clientSocket.getClientName(), json.getString("key"), json.getString("member"));
@@ -119,6 +132,8 @@ public class PandaServer {
                             resultData = listListener.parseData(channel, data);
                         }else if(channel.isSimple()) {
                             resultData = simpleListener.parseData(channel, data);
+                        }else if(channel.isByteArray()) {
+                            resultData = byteArrayListener.parseData(channel, data);
                         }else {
                             System.out.println("[PandaServer] Pipeline-Channel not found! Name="+channel + " (Data="+data+")");
                         }
@@ -190,19 +205,118 @@ public class PandaServer {
                     System.out.println(" -datatree -> creates the DataTree file");
                     System.out.println(" -testall -> tests all Database functions by creating a client & connect it");
 
-                } else if(name.equalsIgnoreCase("stop")){
+                } else if(name.equalsIgnoreCase("stop")) {
                     try {
                         dataStorage.saveDatabase();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     this.simpleSocketServer.stop("Server was stopped by command.");
-                    break;
                 } else if(name.equalsIgnoreCase("datatree")) {
                     System.out.println("Start writing Data-Tree");
                     getDataStorage().generateDataTree();
                     System.out.println("Data-Tree created");
 
+                } else if(name.equalsIgnoreCase("test:datatree")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn) {
+                            client.makeDataTree();
+                        }
+                    });
+
+                    killTestClient(client);
+                } else if(name.equalsIgnoreCase("test:limit")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn) {
+                            BlockingPipelineSupplier block = client.getBlockingPipelineSupplier();
+                            long start = System.currentTimeMillis();
+
+                            for(int i = -1000; i < 1000; i++) {
+                                System.out.println("setValue for x= " + i + " time="+(System.currentTimeMillis()-start)+"ms");
+                                PipelineSupplier pipeline = client.createPipelineSupplier();
+                                for(int z = -1000; z < 1000; z++) {
+                                    //block.setValue("region", i+","+z, (int)(Math.random()*10), 100);
+                                    //pipeline.setValue("region", i+","+z, (int)(Math.random()*10), null);
+                                    client.setValue("region", i+","+z, (int)(Math.random()*10), null);
+                                }
+                                if(pipeline.size() > 0) {
+                                    pipeline.sync();
+                                }
+                            }
+
+                            System.out.println("getting values now...");
+                            for(int i = 0; i < 20; i++) {
+                                long startT = System.currentTimeMillis();
+                                Pair<Status,Double> pair = block.getValueMemberData("region", i+","+i, 1000);
+                                if(pair != null) {
+                                    System.out.println("Status: " + pair.getFirst() + " Value: " + pair.getSecond());
+                                }
+                                long endT = System.currentTimeMillis();
+                                System.out.println("Time: " + (endT-startT) + "ms");
+                            }
+                            long startT = System.currentTimeMillis();
+                            Pair<Status, MemberValueDataStorage.ValueMembersInfo> info = block.getValueInfo("region", false, 1000);
+                            if(info != null) {
+                                System.out.println("Status: " + info.getFirst() + " Info: " + info.getSecond());
+                            }
+                            long endT = System.currentTimeMillis();
+                            System.out.println("Time: " + (endT-startT) + "ms");
+                        }
+                        client.interrupt();
+                    });
+                    client.start();
+
+                } else if(name.equalsIgnoreCase("test:byte")) {
+                    PandaClient client = new PandaClient("database_test_min","localhost",port);
+                    client.setOnLogin(loggedIn -> {
+                        if(loggedIn){
+                            PipelineSupplier pipe = client.createPipelineSupplier();
+                            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+                            pipe.createNewByteArray("region", 1000*1000, status -> System.out.println("createNewByteArray: " + status));
+                            pipe.getByteArrayIndex("region", 123, (value,status) -> System.out.println("getByteArrayIndex: " + status + " -> " + value));
+                            for(int x = -500; x < 500; x++) {
+                                for(int y = -500; y < 500; y++) {
+                                    int index = (x+500)*1000+(y+500);
+                                    pipe.setByteArrayIndex("region", index, (byte) (index%255), null);
+                                }
+                            }
+                            start.set(System.currentTimeMillis());
+                            pipe.getByteArrayIndex("region", 0, (value,status) -> {
+                                System.out.println("getByteArrayIndex: " + status + " -> " + value);
+                            });
+                            pipe.getByteArrayIndex("region", 123, (value,status) -> System.out.println("getByteArrayIndex: " + status + " -> " + value));
+                            pipe.getByteArrayIndex("region", 123456, (value,status) -> System.out.println("getByteArrayIndex: " + status + " -> " + value));
+                            pipe.getByteArrayIndexes("region", new int[]{0,1,2,3,4,5,6,7,123,456,789,123456,399999}, (values,status) -> System.out.println("getByteArrayIndexes: " + status + " -> " + Arrays.toString(values == null ? new Byte[0] : (Byte[]) values)));
+                            pipe.getByteArrayIndexes("region", new int[]{0,1,2,3,4,5,6,7,123,456,789,123456,100000000}, (values,status) -> System.out.println("getByteArrayIndexes: " + status + " -> " + Arrays.toString(values == null ? new Byte[0] : (Byte[]) values)));
+                            pipe.getByteArrayIndex("region", 399999, (value,status) -> {
+                                System.out.println("getByteArrayIndex: " + status + " -> " + value);
+                                System.out.println("Time: " + (System.currentTimeMillis()- start.get()) + "ms");
+                                client.interrupt();
+                            });
+
+
+                            /*
+                            pipe.setByteArrayIndex("key", 0, (byte)72, status -> System.out.println("setByteArrayIndex: " + status));
+                            pipe.createNewByteArray("key", 4000, status -> System.out.println("createNewByteArray: " + status));
+                            pipe.setByteArrayIndex("key", 1234, (byte)72, status -> System.out.println("setByteArrayIndex: " + status));
+                            pipe.getByteArrayIndex("key", 123, (byteData,status) -> System.out.println("getBytArrayIndex: " + status + " -> " + byteData));
+                            pipe.getByteArrayIndex("key", 1234560, (byteData,status) -> System.out.println("getBytArrayIndex: " + status + " -> " + byteData));
+                            pipe.getByteArrayIndex("key", 1234, (byteData,status) -> System.out.println("getBytArrayIndex: " + status + " -> " + byteData));
+                            pipe.getByteArrayKeyData("key", (byteData,status) -> System.out.println("getByteArrayKeyData: " + status + " -> " + Arrays.toString(byteData).replaceAll("null","")));
+                            pipe.getByteArrayKeys((keys,status) -> System.out.println("getByteArrayKeys: " + status + " -> " + keys));
+                            pipe.clearByteArrayKey("key", status -> System.out.println("clearByteArrayKey: " + status));
+                            pipe.getByteArrayIndex("key", 1234, (byteData,status) -> System.out.println("getBytArrayIndex: " + status + " -> " + byteData));
+                            pipe.removeByteArrayKey("key", status -> System.out.println("deleteByteArrayKey: " + status));*/
+
+                            pipe.sync();
+
+                        }
+                    });
+                    client.start();
+
+                    //killTestClient(client);
                 } else if(name.equalsIgnoreCase("test:change")) {
                     PandaClient client = new PandaClient("database_test_min","localhost",port);
                     client.setOnLogin(loggedIn -> {
@@ -211,7 +325,7 @@ public class PandaServer {
                             client.getChangeListenerHandler().addTextListener("key", "member", new TextChangeListener() {
                                 @Override
                                 public void onChange(ChangeReason changeReason, String oldvalue, String newvalue) {
-                                //    System.out.println("Text-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
+                                    System.out.println("Text-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
                                 }
                             });
                             client.getChangeListenerHandler().addValueListener("key", "member", new ValueChangeListener() {
@@ -220,8 +334,25 @@ public class PandaServer {
                                     System.out.println("Value-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
                                 }
                             });
+                            client.getChangeListenerHandler().addSimpleListener("key", new TextChangeListener() {
+                                @Override
+                                public void onChange(ChangeReason changeReason, String oldvalue, String newvalue) {
+                                    System.out.println("Simple-Change: " + changeReason + " | old=" + oldvalue + " -> new=" + newvalue);
+                                }
+                            });
 
                             PipelineSupplier pipe = client.createPipelineSupplier();
+
+                            pipe.setSimple("key", "simple", (string,status) -> {
+                                System.out.println("setSimple: " + status + " | " + string);
+                            });
+                            pipe.setSimple("key", "secondsimple", (string,status) -> {
+                                System.out.println("setSimple Overwrite: " + status + " | " + string);
+                            });
+                            pipe.removeSimple("key", (oldstring,status) -> {
+                                System.out.println("removeSimple: " + status + " | " + oldstring);
+                            });
+
 /*
                             pipe.setText("key", "member", "firstVal", (old,status) -> System.out.println("setText0: " + status + " | old=" + old));
                             pipe.setText("key", "member", "secondVal", (old,status) -> System.out.println("setText1: " + status + " | old=" + old));
@@ -229,14 +360,14 @@ public class PandaServer {
                             pipe.setText("key", "member", "firstVal", (old,status) -> System.out.println("setText0: " + status + " | old=" + old));
                             pipe.setText("key", "member", "secondVal", (old,status) -> System.out.println("setText1: " + status + " | old=" + old));
                             pipe.removeTextKey("key", status -> System.out.println("removeTextKey: " + status));
-  */
+
                             pipe.setValue("key", "member", 123.0, (newv,status) -> System.out.println("setValue0: " + status + " | old=" + newv));
                             pipe.setValue("key", "member", 321.0, (newv,status) -> System.out.println("setValue1: " + status + " | old=" + newv));
                             pipe.addValue("key", "member", -200.0, (newv,status) -> System.out.println("addValue: " + status + " | old=" + newv));
                             pipe.removeValueMember("key", "member", (old,status) -> System.out.println("removeValueMember: " + status + " | old=" + old));
                             pipe.setValue("key", "member", 123.0, (newv,status) -> System.out.println("setValue0: " + status + " | old=" + newv));
                             pipe.removeValueKey("key", status -> System.out.println("removeValueKey: " + status));
-
+*/
                             pipe.sync();
 
                         }
@@ -350,7 +481,7 @@ public class PandaServer {
                                                     System.out.println("removeListIndex(" + type + "," + key + ",0): " + status4 + " -> " + specific);
                                                     PipelineSupplier pipe6 = client.createPipelineSupplier();
                                                     pipe6.removeListKey(type,key,(status1 -> System.out.println("removeLListKey: " + status1)));
-                                                    pipe6.removeListtype(type, (status1 -> System.out.println("removeListType: " + status1)));
+                                                    pipe6.removeListType(type, (status1 -> System.out.println("removeListType: " + status1)));
                                                     pipe6.sync();
                                                 });
                                                 pipe5.sync();
@@ -436,7 +567,6 @@ public class PandaServer {
 
     private void killTestClient(PandaClient client) {
         client.setStatusInfo(clientStatusInfo -> System.out.println("StatusInfo: " + clientStatusInfo));
-
         client.start();
 
         Timer timer = new Timer(true);

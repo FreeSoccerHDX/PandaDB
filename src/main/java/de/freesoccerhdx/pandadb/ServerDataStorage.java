@@ -1,10 +1,12 @@
 package de.freesoccerhdx.pandadb;
 
-import de.freesoccerhdx.pandadb.serverlisteners.ListTypeDataStorage;
-import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
-import de.freesoccerhdx.pandadb.serverlisteners.SimpleDataStorage;
-import de.freesoccerhdx.pandadb.serverlisteners.TextsDataStorage;
-import de.freesoccerhdx.pandadb.serverlisteners.ValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.ByteArrayDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.ListTypeDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.SimpleDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.TextsDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.ValueDataStorage;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
@@ -15,6 +17,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
@@ -22,18 +25,29 @@ import java.util.TimerTask;
 
 public class ServerDataStorage {
 
-    private final ValueDataStorage valueData = new ValueDataStorage(this);
-    private final TextsDataStorage textData = new TextsDataStorage(this);
-    private final TextsDataStorage serializableData = new TextsDataStorage(this);
-    private final SimpleDataStorage simpleData = new SimpleDataStorage();
+    private final ValueDataStorage valueData;
+    private final TextsDataStorage textData;
+    private final TextsDataStorage serializableData;
+    private final SimpleDataStorage simpleData;
 
-    private final ListTypeDataStorage listData = new ListTypeDataStorage(this);
+    private final ListTypeDataStorage listData;
 
-    public static File databaseFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","panda.db");
-    public static File dataTreeFile = new File("C:\\Users\\timau\\Documents\\intellj\\trash","datatree.txt");
-    private boolean haschanged = true;
+    private final ByteArrayDataStorage byteArrayData;
 
-    public ServerDataStorage(){
+    private final File databaseFile;
+    private final File dataTreeFile;
+    private long haschanged = -1;
+
+    public ServerDataStorage(@NotNull File databaseFile, @NotNull File dataTreeFile) {
+        this.databaseFile = databaseFile;
+        this.dataTreeFile = dataTreeFile;
+        haschanged = System.currentTimeMillis();
+        valueData = new ValueDataStorage(this);
+        textData = new TextsDataStorage(this);
+        serializableData = new TextsDataStorage(this);
+        simpleData = new SimpleDataStorage(this);
+        listData = new ListTypeDataStorage(this);
+        byteArrayData = new ByteArrayDataStorage(this);
 
         try {
             System.out.println(" ");
@@ -54,7 +68,8 @@ public class ServerDataStorage {
             public void run() {
 
                 try {
-                    if(haschanged || !databaseFile.exists()) {
+                    long dif = System.currentTimeMillis() - haschanged;
+                    if((dif > 1000 && haschanged != -1) || !databaseFile.exists()) {
                         databaseFile.mkdirs();
                         System.out.println(" ");
                         System.out.println("Try to save the data...");
@@ -63,7 +78,7 @@ public class ServerDataStorage {
                         long end = System.currentTimeMillis();
                         System.out.println("Saving data was successful in "+(end-start)+"ms!");
                         System.out.println(" ");
-                        haschanged = false;
+                        haschanged = -1;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -72,6 +87,7 @@ public class ServerDataStorage {
                 }
             }
         },1000L*30,1000L*60);
+
     }
 
 
@@ -85,6 +101,20 @@ public class ServerDataStorage {
             FileOutputStream fos = new FileOutputStream(dataTreeFile);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
+            bw.write("ByteArrayData(Size="+byteArrayData.size()+"):");
+            bw.newLine();
+            for(String s : byteArrayData.keySet()){
+                bw.write("    KEY="+s + " VALUE="+ Arrays.toString(byteArrayData.get(s)).replaceAll(" null",""));
+                bw.newLine();
+            }
+
+            bw.write("SimpleData(Size="+simpleData.size()+"):");
+            bw.newLine();
+            for(String s : simpleData.keySet()){
+                bw.write("    KEY="+s + " VALUE="+simpleData.get(s));
+                bw.newLine();
+            }
 
             bw.write("ValueData(Size="+valueData.size()+"):");
             bw.newLine();
@@ -272,6 +302,21 @@ public class ServerDataStorage {
                 simpleData.put(key,value);
             }
 
+            int byteArraySize = dis.readInt();
+            for(int i = 0; i < byteArraySize; i++){
+                String key = dis.readUTF();
+                int arraySize = dis.readInt();
+                Byte[] array = new Byte[arraySize];
+                for(int a = 0; a < arraySize; a++){
+                    int value = dis.readInt();
+                    if(value != -4000) {
+                        array[a] = (byte) value;
+                    }
+
+                }
+                byteArrayData.put(key, array);
+            }
+
 
         }
     }
@@ -346,6 +391,15 @@ public class ServerDataStorage {
                 dos.writeUTF(simpleData.get(key));
             }
 
+            dos.writeInt(byteArrayData.size());
+            for(String key : byteArrayData.keySet()){
+                dos.writeUTF(key);
+                dos.writeInt(byteArrayData.get(key).length);
+                for(Byte b : byteArrayData.get(key)){
+                    dos.writeInt(b == null ? -4000 : b);
+
+                }
+            }
         }
 
 
@@ -367,13 +421,17 @@ public class ServerDataStorage {
         return listData;
     }
 
-
-
-    public void needSave() {
-        this.haschanged = true;
-    }
-
     public SimpleDataStorage getSimpleData() {
         return simpleData;
     }
+
+    public ByteArrayDataStorage getByteArrayData() {
+        return byteArrayData;
+    }
+
+    public void needSave() {
+        this.haschanged = System.currentTimeMillis();
+    }
+
+
 }

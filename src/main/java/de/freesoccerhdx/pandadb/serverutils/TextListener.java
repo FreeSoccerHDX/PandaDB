@@ -1,20 +1,19 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils;
 
 import de.freesoccerhdx.pandadb.Triple;
 import de.freesoccerhdx.pandadb.clientutils.PandaClientChannel;
 import de.freesoccerhdx.pandadb.PandaServer;
 import de.freesoccerhdx.pandadb.Status;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeReason;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.TextsDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
-import de.freesoccerhdx.simplesocket.server.ServerClientSocket;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public class TextListener {
+public class TextListener extends DataChannelListener {
 
     private final PandaServer pandaServer;
 
@@ -76,29 +75,7 @@ public class TextListener {
         return null;
     }
 
-
-    private JSONObject createTotalObject(String questid, Object info){
-        if(questid != null) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("id", questid);
-            if (info != null) {
-                if(info instanceof Status s) {
-                    jsonObject.put("s", s.ordinal());
-                }else if(info instanceof Pair pair) {
-                    jsonObject.put("s", ((Status)pair.getFirst()).ordinal());
-                    if(pair.getSecond() instanceof HashMap map) {
-                        jsonObject.put("i", ((HashMap<String, String>)map));
-                    }else {
-                        jsonObject.put("i", pair.getSecond());
-                    }
-                }
-            }
-            return jsonObject;
-        }
-        return null;
-    }
-
-    // UUID -> CleintName,Key,Member
+    // UUID -> ClientName,Key,Member
     private HashMap<UUID, Triple<String,String,String>> changeListener = new HashMap<>();
 
     public void addChangeListener(UUID uuid, String clientName, String key, String member) {

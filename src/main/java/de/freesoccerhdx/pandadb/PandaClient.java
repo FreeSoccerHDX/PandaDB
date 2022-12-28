@@ -3,12 +3,13 @@ package de.freesoccerhdx.pandadb;
 import de.freesoccerhdx.pandadb.clientutils.BlockingPipelineSupplier;
 import de.freesoccerhdx.pandadb.clientutils.changelistener.ChangeListenerHandler;
 import de.freesoccerhdx.pandadb.clientutils.ClientCommands;
-import de.freesoccerhdx.pandadb.clientutils.DatabaseReader;
 import de.freesoccerhdx.pandadb.clientutils.PandaDataSerializer;
-import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
 import de.freesoccerhdx.simplesocket.client.ClientListener;
 import de.freesoccerhdx.simplesocket.client.SimpleSocketClient;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,13 +21,12 @@ import java.util.Map;
 public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
-    protected final HashMap<DataResult.Result, Object> extraListenerInfo = new HashMap<>();
     protected final HashMap<String, DataResult.Result> futureListener = new HashMap<>();
     private final PipelineSupplier mainPipelineSupplier;
     private final ChangeListenerHandler changeListener;
 
 
-    public PandaClient(String name, String ip, int port){
+    public PandaClient(String name, String ip, int port) {
         super(name, ip, port);
 
         mainPipelineSupplier = new PipelineSupplier(this);
@@ -74,7 +74,7 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
     /**
      * USE THIS FUCKING WISELY! Too many database-calls will not work since the transfer length-limit is reached.
-     * Anyway... this can handle up to 99`999`999 chars while sending messages... safe until maybe 20k Database-calls
+     * Anyway... this can handle up to 99`999`999 chars while sending messages...
      * */
     public PipelineSupplier createPipelineSupplier(){
         return new PipelineSupplier(this);
@@ -87,18 +87,38 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
             if (listener != null) {
                 //System.out.println("Listener found for id=" + id + " -> " + listener.getClass().getSimpleName());
                 if(listener instanceof DataResult.SortedValueMemberDataResult result) {
-                    if(info == null) {
+                    if (info == null) {
                         result.result(null, status);
-                    }else{
+                    } else {
                         JSONArray jsonArray = (JSONArray) info;
-                        Pair<String,Double>[] pairs = new Pair[jsonArray.length()/2];
-                        for(int i = 0; i < jsonArray.length(); i+=2){
-                            pairs[i/2] = new Pair<>(jsonArray.getString(i), jsonArray.getDouble(i+1));
+                        Pair<String, Double>[] pairs = new Pair[jsonArray.length() / 2];
+                        for (int i = 0; i < jsonArray.length(); i += 2) {
+                            pairs[i / 2] = new Pair<>(jsonArray.getString(i), jsonArray.getDouble(i + 1));
                         }
                         result.result(pairs, status);
                     }
 
-
+                }else if(listener instanceof DataResult.KeyByteDataResult result) {
+                    if (info == null) {
+                        result.result(null, status);
+                    } else {
+                        JSONArray jsonArray = (JSONArray) info;
+                        Byte[] bytes = new Byte[jsonArray.length()];
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            Object o = jsonArray.get(i);
+                            if(o instanceof Number) {
+                                bytes[i] = ((Number) o).byteValue();
+                            }
+                            //bytes[i] = o == null ? null : ((Number) o).byteValue();
+                        }
+                        result.result(bytes, status);
+                    }
+                }else if(listener instanceof DataResult.ByteResult result) {
+                    if (info == null) {
+                        result.result(null, status);
+                    } else {
+                        result.result(((Number)info).byteValue(), status);
+                    }
                 }else if (listener instanceof DataResult.ValueResult result) {
                     if (info == null) {
                         result.result(null, status);
@@ -125,42 +145,8 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                         result.result(null, status);
                     }
 
-                }else if(listener instanceof DataResult.ListTypeValueResult result){
+                }else if(listener instanceof DataResult.ListTypeValueResult result) {
                     result.result(info,status);
-                }else if (listener instanceof DataResult.SpecificResult result) {
-                    ClientCommands.SerializerFactory factory = (ClientCommands.SerializerFactory) extraListenerInfo.get(result);
-
-                    PandaDataSerializer pandaDataSerializer = null;
-                    if(info != null){
-                        pandaDataSerializer = (PandaDataSerializer) factory.create();
-                        JSONObject jsonObject = new JSONObject(info.toString());
-                        pandaDataSerializer.deserialize(new DatabaseReader(jsonObject));
-                    }
-                    extraListenerInfo.remove(result);
-                    result.result(pandaDataSerializer,status);
-                }else if (listener instanceof DataResult.ListStoredSerializableResult result) {
-                    ClientCommands.SerializerFactory factory = (ClientCommands.SerializerFactory) extraListenerInfo.get(result);
-
-                    HashMap<String,PandaDataSerializer> data = null;
-                    if(info != null){
-                        data = new HashMap<>();
-                        Map<String, String> extractedData = (Map) ((JSONObject) info).toMap();
-
-                        for(String key : extractedData.keySet()){
-                            try {
-                                JSONObject keyData = new JSONObject(extractedData.get(key));
-                                PandaDataSerializer pandaDataSerializer = (PandaDataSerializer) factory.create();
-                                pandaDataSerializer.deserialize(new DatabaseReader(keyData));
-                                data.put(key, pandaDataSerializer);
-                            }catch (Exception exception){
-                                exception.printStackTrace();
-                            }
-                        }
-
-                    }
-
-                    extraListenerInfo.remove(result);
-                    result.result(data, status);
                 }else if (listener instanceof DataResult.ValuesInfoResult result) {
 
                     MemberValueDataStorage.ValueMembersInfo vmi = null;
@@ -186,18 +172,18 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
                 }else if (listener instanceof DataResult.MemberDataResult result) {
                     if(info == null){
-                        result.resultData(null, status);
+                        result.result(null, status);
                     }else{
                         JSONObject jsonObject = (JSONObject) info;
                         Map hashMap = jsonObject.toMap();
-                        result.resultData((HashMap<String, String>) hashMap, status);
+                        result.result((HashMap<String, String>) hashMap, status);
                     }
 
                 }else if (listener instanceof DataResult.TextResult result) {
                     if(info == null){
                         result.result(null, status);
                     }else {
-                        result.result((String) info, status);
+                        result.result(info.toString(), status);
                     }
                 }else if (listener instanceof DataResult.ListTypeResult result) {
                     if(info != null){
@@ -209,19 +195,19 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                                     listTypes.add(ListType.values()[number.intValue()]);
                                 }
                             }
-                            result.resultList(listTypes, status);
+                            result.result(listTypes, status);
                         }
                     }else{
-                        result.resultList(null, status);
+                        result.result(null, status);
                     }
                 }else if (listener instanceof DataResult.ListResult result) {
                     if(info != null){
                         if(info instanceof JSONArray jsonArray){
                             ArrayList<Object> arrayList = (ArrayList<Object>) jsonArray.toList();
-                            result.resultList(arrayList, status);
+                            result.result(arrayList, status);
                         }
                     }else{
-                        result.resultList(null, status);
+                        result.result(null, status);
                     }
                 }else if (listener instanceof DataResult.ListSizeResult result) {
                     if(info != null){
@@ -237,15 +223,15 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
                         if(info instanceof JSONArray jsonArray){
                             ArrayList arrayList = (ArrayList) jsonArray.toList();
 
-                            result.resultList(arrayList, status);
+                            result.result(arrayList, status);
                         }
                     }else{
-                        result.resultList(null, status);
+                        result.result(null, status);
                     }
                 }else {
                     System.err.println("Unknown Result-Type: " + listener.getClass().getName());
                 }
-            }else{
+            }else if(info != null) {
                 System.err.println("###########################");
                 System.err.println("#");
                 System.err.println("# NO Handler for: id="+id + ", status="+status + ", info="+info );
@@ -259,44 +245,44 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
         }
     }
 
-    @Override
-    public void setText(String key, String member, String value, DataResult.TextResult textResult) {
-        this.mainPipelineSupplier.setText(key, member, value, textResult);
+
+    public void setText(@NotNull String key, @NotNull String member, @NotNull String value, @Nullable DataResult.TextResult result) {
+        this.mainPipelineSupplier.setText(key, member, value, result);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getTextKeys(DataResult.KeysResult keysResult) {
+
+    public void getTextKeys(DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getTextKeys(keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getTextMemberKeys(String key, DataResult.KeysResult keysResult) {
+
+    public void getTextMemberKeys(@NotNull String key, DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getTextMemberKeys(key, keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getTextMemberData(String key, String member, DataResult.TextResult textResult) {
+
+    public void getTextMemberData(@NotNull String key, @NotNull String member, DataResult.@NotNull TextResult textResult) {
         this.mainPipelineSupplier.getTextMemberData(key, member, textResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getTextKeyData(String key, DataResult.MemberDataResult memberDataResult) {
+
+    public void getTextKeyData(@NotNull String key, DataResult.@NotNull MemberDataResult memberDataResult) {
         this.mainPipelineSupplier.getTextKeyData(key, memberDataResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeTextKey(String key, DataResult.StatusResult statusResult) {
+
+    public void removeTextKey(@NotNull String key, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.removeTextKey(key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeTextMember(String key, String member, DataResult.TextResult textResult) {
+
+    public void removeTextMember(@NotNull String key, @NotNull String member, DataResult.TextResult textResult) {
         this.mainPipelineSupplier.removeTextMember(key, member, textResult);
         this.mainPipelineSupplier.sync();
     }
@@ -306,44 +292,44 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
 
-    @Override
-    public <T> void setSerializable(String key, String member, PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
+
+    public <T> void setSerializable(@NotNull String key, @NotNull String member, @NotNull PandaDataSerializer<T> serializer, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.setSerializable(key, member, serializer, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getSerializableKeys(DataResult.KeysResult keysResult) {
+
+    public void getSerializableKeys(DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getSerializableKeys(keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getSerializableMemberKeys(String key, DataResult.KeysResult keysResult) {
+
+    public void getSerializableMemberKeys(@NotNull String key, DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getSerializableMemberKeys(key, keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public <T> void getSerializableMemberData(String key, String member, SerializerFactory<T> type, DataResult.SpecificResult<T> specificResult) {
+
+    public <T> void getSerializableMemberData(@NotNull String key, @NotNull String member, @NotNull SerializerFactory<T> type, DataResult.@NotNull SpecificResult<T> specificResult) {
         this.mainPipelineSupplier.getSerializableMemberData(key, member, type, specificResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public <T> void getSerializableKeyData(String key, SerializerFactory<T> factory, DataResult.ListStoredSerializableResult listStoredSerializableResult) {
+
+    public <T> void getSerializableKeyData(@NotNull String key, @NotNull SerializerFactory<T> factory, DataResult.@NotNull ListStoredSerializableResult listStoredSerializableResult) {
         this.mainPipelineSupplier.getSerializableKeyData(key, factory, listStoredSerializableResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeSerializableKey(String key, DataResult.StatusResult statusResult) {
+
+    public void removeSerializableKey(@NotNull String key, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.removeSerializableKey(key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeSerializableMember(String key, String member, DataResult.StatusResult statusResult) {
+
+    public void removeSerializableMember(@NotNull String key, @NotNull String member, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.removeSerializableMember(key, member, statusResult);
         this.mainPipelineSupplier.sync();
     }
@@ -351,74 +337,67 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
 
-
-
-
-
-
-
-    @Override
-    public void setValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+    public void setValue(@NotNull String key, @NotNull String member, double value, DataResult.ValueResult valueResult) {
         this.mainPipelineSupplier.setValue(key, member, value, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void addValue(String key, String member, double value, DataResult.ValueResult valueResult) {
+
+    public void addValue(@NotNull String key, @NotNull String member, double value, DataResult.ValueResult valueResult) {
         this.mainPipelineSupplier.addValue(key, member, value, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueKeys(DataResult.KeysResult keysResult) {
+
+    public void getValueKeys(DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getValueKeys(keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueMemberKeys(String key, DataResult.KeysResult keysResult) {
+
+    public void getValueMemberKeys(@NotNull String key, DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getValueMemberKeys(key, keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueMemberData(String key, String member, DataResult.ValueResult valueResult) {
+
+    public void getValueMemberData(@NotNull String key, @NotNull String member, DataResult.@NotNull ValueResult valueResult) {
         this.mainPipelineSupplier.getValueMemberData(key, member, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueKeyData(String key, DataResult.ValueMemberDataResult listStoredSerializableResult) {
+
+    public void getValueKeyData(@NotNull String key, DataResult.@NotNull ValueMemberDataResult listStoredSerializableResult) {
         this.mainPipelineSupplier.getValueKeyData(key, listStoredSerializableResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeValueKey(String key, DataResult.StatusResult statusResult) {
+
+    public void removeValueKey(@NotNull String key, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.removeValueKey(key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeValueMember(String key, String member, DataResult.ValueResult valueResult) {
+
+    public void removeValueMember(@NotNull String key, @NotNull String member, DataResult.ValueResult valueResult) {
         this.mainPipelineSupplier.removeValueMember(key, member, valueResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueInfo(String key, boolean withKeys, DataResult.ValuesInfoResult valuesInfoResult) {
+
+    public void getValueInfo(@NotNull String key, boolean withKeys, DataResult.@NotNull ValuesInfoResult valuesInfoResult) {
         this.mainPipelineSupplier.getValueInfo(key, withKeys, valuesInfoResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueLowestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult) {
+
+    public void getValueLowestTop(@NotNull String key, int maxMembers, DataResult.@NotNull SortedValueMemberDataResult sortedValueMemberDataResult) {
        this.mainPipelineSupplier.getValueLowestTop(key, maxMembers, sortedValueMemberDataResult);
        this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getValueHighestTop(String key, int maxMembers, DataResult.SortedValueMemberDataResult sortedValueMemberDataResult) {
+
+    public void getValueHighestTop(@NotNull String key, int maxMembers, DataResult.@NotNull SortedValueMemberDataResult sortedValueMemberDataResult) {
         this.mainPipelineSupplier.getValueHighestTop(key, maxMembers, sortedValueMemberDataResult);
         this.mainPipelineSupplier.sync();
     }
@@ -426,56 +405,56 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
 
-    @Override
-    public <T> void addList(ListType<T> listType, String key, T value, DataResult.StatusResult statusResult) {
+
+    public <T> void addList(@NotNull ListType<T> listType, @NotNull String key, @NotNull T value, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.addList(listType, key, value, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeListtype(ListType listType, DataResult.StatusResult statusResult) {
-        this.mainPipelineSupplier.removeListtype(listType, statusResult);
+
+    public void removeListType(@NotNull ListType listType, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeListType(listType, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeListKey(ListType listType, String key, DataResult.StatusResult statusResult) {
+
+    public void removeListKey(@NotNull ListType listType, @NotNull String key, DataResult.StatusResult statusResult) {
         this.mainPipelineSupplier.removeListKey(listType, key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeListIndex(ListType listType, String key, int index, DataResult.ListTypeValueResult specificResult) {
+
+    public void removeListIndex(@NotNull ListType listType, @NotNull String key, int index, DataResult.ListTypeValueResult specificResult) {
         this.mainPipelineSupplier.removeListIndex(listType, key, index, specificResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getListKeys(ListType listType, DataResult.KeysResult keysResult) {
+
+    public void getListKeys(@NotNull ListType listType, DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getListKeys(listType, keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getListTypes(DataResult.ListTypeResult listResult) {
+
+    public void getListTypes(DataResult.@NotNull ListTypeResult listResult) {
         this.mainPipelineSupplier.getListTypes(listResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public <T> void getListData(ListType<T> listType, String key, DataResult.ListResult<T> listResult) {
+
+    public <T> void getListData(@NotNull ListType<T> listType, @NotNull String key, DataResult.@NotNull ListResult<T> listResult) {
         this.mainPipelineSupplier.getListData(listType, key, listResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public <T> void getListIndex(ListType<T> listType, String key, int index, DataResult.ListTypeValueResult<T> specificResult) {
+
+    public <T> void getListIndex(@NotNull ListType<T> listType, @NotNull String key, int index, DataResult.@NotNull ListTypeValueResult<T> specificResult) {
         this.mainPipelineSupplier.getListIndex(listType, key, index, specificResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getListSize(ListType listType, String key, DataResult.ListSizeResult listSizeResult) {
+
+    public void getListSize(@NotNull ListType listType, @NotNull String key, DataResult.@NotNull ListSizeResult listSizeResult) {
         this.mainPipelineSupplier.getListSize(listType, key, listSizeResult);
         this.mainPipelineSupplier.sync();
     }
@@ -484,32 +463,88 @@ public class PandaClient extends SimpleSocketClient implements ClientCommands {
 
 
 
-    @Override
-    public void setSimple(String key, String value, DataResult.TextResult textResult) {
+
+    public void setSimple(@NotNull String key, @NotNull String value, DataResult.TextResult textResult) {
         this.mainPipelineSupplier.setSimple(key, value, textResult);
         this.mainPipelineSupplier.sync();
     }
-    @Override
-    public void getSimple(String key, DataResult.TextResult textResult) {
+
+    public void getSimple(@NotNull String key, DataResult.@NotNull TextResult textResult) {
         this.mainPipelineSupplier.getSimple(key, textResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void removeSimple(String key, DataResult.TextResult textResult) {
+
+    public void removeSimple(@NotNull String key, DataResult.TextResult textResult) {
         this.mainPipelineSupplier.removeSimple(key, textResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getSimpleKeys(DataResult.KeysResult keysResult) {
+
+    public void getSimpleKeys(DataResult.@NotNull KeysResult keysResult) {
         this.mainPipelineSupplier.getSimpleKeys(keysResult);
         this.mainPipelineSupplier.sync();
     }
 
-    @Override
-    public void getSimpleData(DataResult.MemberDataResult memberDataResult) {
+
+    public void getSimpleData(DataResult.@NotNull MemberDataResult memberDataResult) {
         this.mainPipelineSupplier.getSimpleData(memberDataResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+
+
+    public void createNewByteArray(@NotNull String key, int size, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.createNewByteArray(key, size, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void setByteArrayIndex(@NotNull String key, int index, Byte value, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.setByteArrayIndex(key, index, value, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void getByteArrayIndex(@NotNull String key, int index, DataResult.@NotNull ByteResult byteResult) {
+        this.mainPipelineSupplier.getByteArrayIndex(key, index, byteResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void getByteArrayIndexes(@NotNull String key, int[] indexes, DataResult.@NotNull KeyByteDataResult byteResult) {
+        this.mainPipelineSupplier.getByteArrayIndexes(key, indexes, byteResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void getByteArrayKeyData(@NotNull String key, DataResult.@NotNull KeyByteDataResult keyByteDataResult) {
+        this.mainPipelineSupplier.getByteArrayKeyData(key, keyByteDataResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void getByteArrayKeySize(@NotNull String key, DataResult.@NotNull ListSizeResult listSizeResult) {
+        this.mainPipelineSupplier.getByteArrayKeySize(key, listSizeResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void getByteArrayKeys(DataResult.@NotNull KeysResult keysResult) {
+        this.mainPipelineSupplier.getByteArrayKeys(keysResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void removeByteArrayKey(@NotNull String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.removeByteArrayKey(key, statusResult);
+        this.mainPipelineSupplier.sync();
+    }
+
+
+    public void clearByteArrayKey(@NotNull String key, DataResult.StatusResult statusResult) {
+        this.mainPipelineSupplier.clearByteArrayKey(key, statusResult);
         this.mainPipelineSupplier.sync();
     }
 

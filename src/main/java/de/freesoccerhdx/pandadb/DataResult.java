@@ -1,6 +1,6 @@
 package de.freesoccerhdx.pandadb;
 
-import de.freesoccerhdx.pandadb.serverlisteners.MemberValueDataStorage;
+import de.freesoccerhdx.pandadb.serverutils.datastorage.MemberValueDataStorage;
 import de.freesoccerhdx.simplesocket.Pair;
 
 import java.util.ArrayList;
@@ -10,12 +10,13 @@ public class DataResult {
 
     interface Result {
     }
+
     private interface TypeListResult<E> extends Result {
-        void resultList(ArrayList<E> list, Status status);
+        void result(ArrayList<E> list, Status status);
     }
 
     public interface MemberDataResult extends Result{
-        void resultData(HashMap<String, String> memberData, Status status);
+        void result(HashMap<String, String> memberData, Status status);
     }
 
     public interface SpecificResult<T> extends Result {
@@ -58,20 +59,23 @@ public class DataResult {
         void result(T data, Status status);
     }
 
-
     public interface ListTypeResult extends ListResult<ListType> {
-        void resultList(ArrayList<ListType> list, Status status);
+        void result(ArrayList<ListType> list, Status status);
     }
 
     public interface ListResult<E> extends TypeListResult<E> {
-        void resultList(ArrayList<E> data, Status status);
+        void result(ArrayList<E> data, Status status);
     }
 
     public interface KeysResult extends TypeListResult<String> {
-        void resultList(ArrayList<String> data, Status status);
+        void result(ArrayList<String> data, Status status);
     }
 
+    public interface ByteResult extends Result {
+        void result(Byte data, Status status);
+    }
 
-
-
+    public interface KeyByteDataResult extends Result {
+        void result(Byte[] data, Status status);
+    }
 }

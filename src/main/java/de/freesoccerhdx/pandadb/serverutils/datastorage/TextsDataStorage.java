@@ -1,4 +1,4 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils.datastorage;
 
 import de.freesoccerhdx.pandadb.ServerDataStorage;
 import de.freesoccerhdx.pandadb.Status;
@@ -31,7 +31,7 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
     }
 
     public Pair<Status, List<String>> getKeys() {
-        return size() == 0 ? new Pair<>(Status.NO_KEYS_AVAILABLE, null) : new Pair<>(Status.SUCCESSFUL, new ArrayList<>(keySet()));
+        return size() == 0 ? new Pair<>(Status.NO_KEYS_AVAILABLE, null) : new Pair<>(Status.SUCCESSFUL_GET_KEYS, new ArrayList<>(keySet()));
     }
 
     public Pair<Status,List<String>> getMemberKeys(String key) {
@@ -41,7 +41,7 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
 
         if(textMemberKeys != null){
             stringList = new ArrayList<>(textMemberKeys.keySet());
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_KEYS;
         }
 
         return Pair.of(status,stringList);
@@ -55,19 +55,17 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
     public Pair<Status,String> getMemberData(String key, String member) {
         String text = null;
         Status status = Status.KEY_NOT_FOUND;
-        try {
-            HashMap<String, String> keymap = this.get(key);
-            if (keymap != null) {
-                text = keymap.get(member);
-                if(text == null){
-                    status = Status.MEMBER_NOT_FOUND;
-                }else{
-                    status = Status.SUCCESSFUL;
-                }
+
+        HashMap<String, String> keymap = this.get(key);
+        if (keymap != null) {
+            text = keymap.get(member);
+            if(text == null){
+                status = Status.MEMBER_NOT_FOUND;
+            }else{
+                status = Status.SUCCESSFUL_GET_DATA;
             }
-        }catch (Exception exception){
-            exception.printStackTrace();
         }
+
         return Pair.of(status,text);
     }
 
@@ -78,17 +76,12 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
         HashMap<String, String> memberData = get(key);
 
         if(memberData != null){
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_DATA;
         }
 
         return Pair.of(status,memberData);
     }
 
-    /**
-     * Removes the key with all members
-     *
-     * @return Status(KEY_NOT_FOUND / SUCCESSFUL_REMOVED_KEY)
-     */
     public Status removeKey(String key) {
         Status status = this.remove(key) == null ? Status.KEY_NOT_FOUND : Status.SUCCESSFUL_REMOVED_KEY;
         if(status == Status.SUCCESSFUL_REMOVED_KEY){
@@ -97,11 +90,6 @@ public class TextsDataStorage extends HashMap<String, HashMap<String, String>>{
         return status;
     }
 
-    /**
-     * Removes the member from the key with its value
-     *
-     * @return Pair<StoredString, Status(SUCCESSFUL_REMOVED_MEMBER / MEMBER_NOT_FOUND / KEY_NOT_FOUND)>
-     */
     public Pair<Status,String> removeMember(String key, String member) {
         HashMap<String, String> keymap = this.get(key);
         if(keymap != null){

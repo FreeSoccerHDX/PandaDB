@@ -14,7 +14,7 @@ public abstract class ListType<T> {
         return VALUES.toArray(new ListType[0]);
     }
 
-    public static final ListType STRING = new ListType(String.class){
+    public static final ListType<String> STRING = new ListType(String.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeUTF((String) obj);
@@ -31,7 +31,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType STRING_ARRAY = new ListType(String[].class){
+    public static final ListType<String[]> STRING_ARRAY = new ListType(String[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){
@@ -67,7 +67,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType BOOLEAN = new ListType(Boolean.class){
+    public static final ListType<Boolean> BOOLEAN = new ListType(Boolean.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeBoolean((Boolean) obj);
@@ -90,7 +90,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType BOOLEAN_ARRAY = new ListType(Boolean[].class){
+    public static final ListType<Boolean[]> BOOLEAN_ARRAY = new ListType(Boolean[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){
@@ -131,7 +131,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType INTEGER = new ListType(Integer.class){
+    public static final ListType<Integer> INTEGER = new ListType(Integer.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             dos.writeInt((Integer) obj);
@@ -148,7 +148,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType INTEGER_ARRAY = new ListType(Integer[].class){
+    public static final ListType<Integer[]> INTEGER_ARRAY = new ListType(Integer[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){
@@ -190,7 +190,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType BYTE = new ListType(Byte.class){
+    public static final ListType<Byte> BYTE = new ListType(Byte.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Number number){
@@ -211,7 +211,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType BYTE_ARRAY = new ListType(Byte[].class){
+    public static final ListType<Byte[]> BYTE_ARRAY = new ListType(Byte[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){
@@ -251,7 +251,7 @@ public abstract class ListType<T> {
             return null;
         }
     };
-    public static final ListType DOUBLE = new ListType(Double.class){
+    public static final ListType<Double> DOUBLE = new ListType(Double.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Number number){
@@ -272,7 +272,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType DOUBLE_ARRAY = new ListType(Double[].class){
+    public static final ListType<Double[]> DOUBLE_ARRAY = new ListType(Double[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){
@@ -313,7 +313,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType LONG = new ListType(Long.class){
+    public static final ListType<Long> LONG = new ListType(Long.class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof Number number){
@@ -334,7 +334,7 @@ public abstract class ListType<T> {
         }
     };
 
-    public static final ListType LONG_ARRAY = new ListType(Long[].class){
+    public static final ListType<Long[]> LONG_ARRAY = new ListType(Long[].class){
         @Override
         public void write(DataOutputStream dos, Object obj) throws IOException {
             if(obj instanceof JSONArray jsonArray){

@@ -1,4 +1,4 @@
-package de.freesoccerhdx.pandadb.serverlisteners;
+package de.freesoccerhdx.pandadb.serverutils.datastorage;
 
 import de.freesoccerhdx.pandadb.ServerDataStorage;
 import de.freesoccerhdx.pandadb.Status;
@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
     
@@ -48,22 +47,19 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
      * */
     public Pair<Status,Double> addValue(String key, String member, double value) {
         MemberValueDataStorage keymap = this.get(key);
-        Status status = Status.SUCCESSFUL_OVERWRITE_OLD;
 
-        if(keymap == null){
-            keymap = new MemberValueDataStorage();
-            this.put(key, keymap);
-            status = Status.SUCCESSFUL_CREATED_NEW;
+        if(keymap == null) {
+            return Pair.of(Status.KEY_NOT_FOUND, null);
         }
-        Double prevalue = keymap.get(member);
-        if(prevalue == null){
-            status = Status.SUCCESSFUL_CREATED_NEW;
+        if(!keymap.containsKey(member)) {
+            return Pair.of(Status.MEMBER_NOT_FOUND, null);
         }
-        Double newvalue = value + ((prevalue == null) ? 0 : prevalue);
+
+        Double newvalue = value + keymap.get(member);
         keymap.put(member, newvalue);
 
         this.serverDataStorage.needSave();
-        return Pair.of(status, newvalue);
+        return Pair.of(Status.SUCCESSFUL_OVERWRITE_OLD, newvalue);
     }
 
     public Pair<Status, List<String>> getKeys() {
@@ -72,7 +68,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
 
         if(this.size() > 0) {
             stringList = new ArrayList<>(this.keySet());
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_KEYS;
         }
 
         return Pair.of(status,stringList);
@@ -90,7 +86,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
 
         if(valueMemberKeys != null){
             stringList = new ArrayList<>(valueMemberKeys.keySet());
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_KEYS;
         }
 
         return Pair.of(status,stringList);
@@ -113,7 +109,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
             if(val == null){
                 status = Status.MEMBER_NOT_FOUND;
             }else{
-                status = Status.SUCCESSFUL;
+                status = Status.SUCCESSFUL_GET_DATA;
             }
         }
 
@@ -125,10 +121,8 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
         HashMap<String, Double> memberData =  this.get(key);
 
         if(memberData != null) {
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_DATA;
         }
-
-       // System.out.println("getKeyData: " + status + " " + memberData);
 
         return Pair.of(status,memberData);
     }
@@ -165,11 +159,11 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
                this.serverDataStorage.needSave();
                 return Pair.of(Status.SUCCESSFUL_REMOVED_MEMBER,oldvalue);
             }
-            return Pair.of(Status.MEMBER_NOT_FOUND, 0.0);
+            return Pair.of(Status.MEMBER_NOT_FOUND, null);
         }
 
 
-        return Pair.of(Status.KEY_NOT_FOUND, 0.0);
+        return Pair.of(Status.KEY_NOT_FOUND, null);
     }
 
 
@@ -187,7 +181,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
 
         if(valueDataStorage != null){
             valueMembersInfo = valueDataStorage.getInfo(withMembers);
-            status = Status.SUCCESSFUL;
+            status = Status.SUCCESSFUL_GET_DATA;
         }
 
         return Pair.of(status,valueMembersInfo);
@@ -220,7 +214,7 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
         }
 
 
-        return Pair.of(Status.SUCCESSFUL, members);
+        return Pair.of(Status.SUCCESSFUL_GET_DATA, members);
     }
 
     public Pair<Status, Pair<String, Double>[]> getHighestTop(String key, int maxMember) {
@@ -250,6 +244,6 @@ public class ValueDataStorage extends HashMap<String, MemberValueDataStorage> {
         }
 
 
-        return Pair.of(Status.SUCCESSFUL, members);
+        return Pair.of(Status.SUCCESSFUL_GET_DATA, members);
     }
 }
